@@ -34,10 +34,15 @@ const ALERT_CLASSES = new Set([
   "window",
 ]);
 
-export function isSecurityEntity(entity: DiscoveredEntity, state?: HassEntity): boolean {
+/** A device HomeDeck would watch in Security, before the person's choice for it. */
+export function isSecurityKind(entity: DiscoveredEntity, state?: HassEntity): boolean {
   if (entity.domain === "lock" || entity.domain === "camera") return true;
   if (entity.domain !== "binary_sensor") return false;
   return SECURITY_CLASSES.has(String(state?.attributes.device_class ?? entity.device_class ?? ""));
+}
+
+export function isSecurityEntity(entity: DiscoveredEntity, state?: HassEntity): boolean {
+  return !entity.not_security && isSecurityKind(entity, state);
 }
 
 export function isSecurityAlert(state?: HassEntity): boolean {

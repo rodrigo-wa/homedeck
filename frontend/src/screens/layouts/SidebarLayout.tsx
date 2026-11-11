@@ -11,7 +11,7 @@ import { HomeGrid } from "../HomeScreen";
 import { SceneStrip } from "../../components/SceneStrip";
 import { pageId, usePageContent, type PageRef } from "../pages";
 import { entityIndex, type ScreenProps } from "../types";
-import { RoomDevices, useRoomList } from "./RoomDevices";
+import { detachSidebar, RoomDevices, useSidebarRoomList } from "./RoomDevices";
 import { roomLights, setRoomLights } from "./shared";
 
 export interface NavLink { id: string; label: string; icon: IconName }
@@ -29,7 +29,7 @@ interface SidebarLayoutProps extends ScreenProps {
 export function SidebarLayout(props: SidebarLayoutProps) {
   const { allRooms, config, data, editing, hass, language, links, onNavigate, onSelectRoom, page, roomId, t } = props;
   const [modalEntity, setModalEntity] = useState<DiscoveredEntity | null>(null);
-  const roomList = useRoomList(props);
+  const roomList = useSidebarRoomList(props);
   const room = roomList.rooms.find((item) => item.id === roomId);
   const { roomName } = entityIndex(allRooms);
   const name = (id: string, fallback: string) => (id === "__unassigned__" ? t("unassigned") : fallback);
@@ -74,7 +74,7 @@ export function SidebarLayout(props: SidebarLayoutProps) {
         <header className="sb-main__header"><div><span className="eyebrow">{t("appName")}</span><h1>{t("overview")}</h1></div></header>
         {editing && <p className="edit-hint">{t("editHint")}</p>}
         {config.visibility.home_cards.scenes && <SceneStrip props={props} />}
-        <HomeGrid {...props} className="sb-grid sb-home" onOpenRoom={(id) => onSelectRoom(id)} />
+        <HomeGrid {...props} className="sb-grid sb-home" onLayout={detachSidebar(props)} onOpenRoom={(id) => onSelectRoom(id)} />
       </>}
     </section>
     {modalEntity && <EntityModal entity={modalEntity} hass={hass} language={language} onClose={() => setModalEntity(null)} roomName={roomName(modalEntity)} t={t} />}

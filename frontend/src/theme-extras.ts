@@ -495,6 +495,13 @@ export const themeExtras = String.raw`
 .app-shell .hd-options button { flex: 1 1 calc(50% - var(--u)*.8); min-height: calc(var(--u)*5.2); padding: 0 calc(var(--u)*1.6); border: 1px solid rgba(255,255,255,.14); border-radius: calc(var(--u)*1.8*var(--hd-r,1)); background: rgba(255,255,255,.08); color: var(--ink); font: 600 calc(var(--u)*1.8)/1.2 var(--f-body); cursor: pointer; }
 .app-shell .hd-options button[aria-pressed="true"] { border-color: transparent; background: var(--on); color: var(--on-ink, #2a2110); }
 .app-shell .tile-buttons--options { flex-wrap: wrap; }
+/* How long ago a sensor changed, under its value on 1x and ½x cards (Settings → Cards). */
+.app-shell .device-tile__since { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 calc(var(--u)*1.4)/1.2 var(--f-body); opacity: .62; }
+/* Vacuum: the three buttons stacked in the controls column, each with its whole label, so they fit in any language. */
+.app-shell .tile-buttons--vacuum { flex-direction: column; align-items: stretch; width: 100%; gap: calc(var(--u)*.6); }
+.app-shell .tile-buttons--vacuum button { flex: none; width: 100%; min-width: 0; height: calc(var(--u)*3.9); padding: 0 calc(var(--u)*1); gap: calc(var(--u)*.6); }
+.app-shell .tile-buttons--vacuum svg { flex: none; }
+.app-shell .tile-buttons__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-shell .tile-buttons--options button { flex: 1 1 calc(33% - var(--u)*.8); }
 .app-shell .tile-buttons--options button[aria-pressed="true"] { background: var(--on); color: var(--on-ink, #2a2110); }
 
@@ -508,6 +515,9 @@ export const themeExtras = String.raw`
 .app-shell .room-options__select { max-width: calc(var(--u)*44); }
 .app-shell .hd-ha-icon { color: inherit; }
 .app-shell .hd-detail__name { display: flex; align-items: center; gap: calc(var(--u)*.8); }
+.app-shell .hd-detail__source { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px calc(var(--u)*1); margin: calc(var(--u)*.4) 0 0; color: var(--ink-2, rgba(255,255,255,.7)); font: 500 calc(var(--u)*1.5)/1.35 var(--f-body); }
+.app-shell .hd-detail__source b { font-weight: 600; color: var(--ink, #fff); }
+.app-shell .hd-detail__source code { font: 500 calc(var(--u)*1.35)/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; opacity: .7; overflow-wrap: anywhere; }
 /* A long name wraps to two lines and the pencil stays beside it. */
 .app-shell .hd-detail__header h2.hd-detail__name { overflow: visible; white-space: normal; }
 .app-shell .hd-detail__name > span { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
@@ -570,6 +580,14 @@ export const themeExtras = String.raw`
 .app-shell .room-card__links { position: absolute; z-index: 2; left: calc(50% + var(--u)*1.2); right: calc(var(--u)*2.4); bottom: calc(var(--u)*2); }
 .app-shell .room-card__links .hd-links { margin: 0; }
 .app-shell .room-card:has(.hd-links) .room-card__content { max-width: calc(50% - var(--u)*3.6); }
+/* The footer (light dots and temperature) stays in the left half too, so the devices never cover the temperature. */
+.app-shell .room-card:has(.hd-links) .room-card__footer { max-width: calc(50% - var(--u)*3.6); }
+/* Short cards (phones, sidebar layout) grow just enough for two devices below the power button. */
+.app-shell .room-card:has(.hd-links) { min-height: max(calc(var(--u)*13 + 48px), 100%); }
+/* A large (4x) room card has the height to spare: the devices take the full width, above the name. */
+.app-shell .hd-item--tall .room-card .room-card__links { position: relative; left: auto; right: auto; bottom: auto; margin-top: auto; }
+.app-shell .hd-item--tall .room-card:has(.hd-links) .room-card__content { margin-top: calc(var(--u)*1.6); max-width: none; }
+.app-shell .hd-item--tall .room-card:has(.hd-links) .room-card__footer { max-width: none; }
 .app-shell .device-tile--wide:has(.hd-links) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .app-shell .room-card:has(.hd-links) .room-card__content strong { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .app-shell .hd-link .ls-switch { flex: none; background: color-mix(in srgb, currentColor 20%, transparent); }
@@ -768,6 +786,8 @@ export const themeExtras = String.raw`
 .app-shell .hd-notice small { flex: none; font-weight: 500; opacity: .7; }
 .app-shell .hd-notice--icon { padding: calc(var(--u)*.9); }
 .app-shell .hd-notice--text { padding-left: calc(var(--u)*1.6); }
+.app-shell .hd-notice { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+.app-shell .hd-notice--confirm { padding-left: calc(var(--u)*1.6); border-color: var(--on, #ffc94d); background: color-mix(in srgb, var(--on, #ffc94d) 34%, rgba(255,255,255,.06)); }
 .app-shell .st-notice-edit { display: flex; align-items: center; gap: calc(var(--u)*.8); min-width: 0; }
 .app-shell .st-notice-edit .st-input { width: calc(var(--u)*22); max-width: 100%; }
 .app-shell .st-notice-edit { flex-wrap: wrap; justify-content: flex-end; }
@@ -787,6 +807,7 @@ export const themeExtras = String.raw`
 .app-shell .hd-rules__value .st-input { width: calc(var(--u)*16); flex: none; }
 .app-shell .hd-rules__days button { min-width: calc(var(--u)*5.4); padding: 0 calc(var(--u)*.8); }
 :is(.app-shell, .onboarding-screen) .hd-import { display: grid; gap: 12px; min-width: 0; text-align: left; }
+.app-shell .hd-import-sheet .hd-detail__header h2 { overflow: visible; white-space: normal; text-overflow: clip; }
 :is(.app-shell, .onboarding-screen) .hd-import p { margin: 0; }
 :is(.app-shell, .onboarding-screen) .hd-import__note, :is(.app-shell, .onboarding-screen) .hd-import__summary { opacity: .78; }
 :is(.app-shell, .onboarding-screen) .hd-import__list { display: grid; gap: 6px; max-height: 260px; overflow-y: auto; }
@@ -802,7 +823,11 @@ export const themeExtras = String.raw`
 :is(.app-shell, .onboarding-screen) .hd-import__check span { display: grid; gap: 2px; }
 :is(.app-shell, .onboarding-screen) .hd-import__check small { opacity: .7; }
 :is(.app-shell, .onboarding-screen) .hd-import__check em { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; font-style: normal; font-size: .8em; opacity: .75; }
-:is(.app-shell, .onboarding-screen) .hd-import__actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+:is(.app-shell, .onboarding-screen) .hd-import__actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* Cancel and Import as a pair: same size, font and corners; only the color tells them apart. */
+:is(.app-shell, .onboarding-screen) .hd-import__actions :is(.primary-button, .secondary-button) { display: inline-flex; align-items: center; justify-content: center; min-width: 116px; height: 42px; margin: 0; padding: 0 20px; border: 1px solid transparent; border-radius: calc(14px*var(--hd-r,1)); font: 700 13px/1 var(--f-body, inherit); letter-spacing: .01em; cursor: pointer; }
+:is(.app-shell, .onboarding-screen) .hd-import__actions .secondary-button { border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.08); color: inherit; }
+:is(.app-shell, .onboarding-screen) .hd-import__actions .secondary-button:hover { background: rgba(255,255,255,.14); }
 :is(.app-shell, .onboarding-screen) .hd-import__done { margin: 10px 0 0; opacity: .85; }
 .onboarding-screen .onboarding-import { margin: 14px 0; }
 .app-shell .hd-import-sheet { max-width: min(560px, calc(100vw - 32px)); }

@@ -17,6 +17,7 @@ import { usePlan } from "../plan";
 import { isNumericState } from "../history";
 import { HistoryChart } from "./HistoryChart";
 import { MAX_NAME, useCustomize } from "../personalize";
+import { isSecurityKind } from "../security";
 import { friendlyDate, ALARM_ARMED, alarmCall, alarmCodeFormat, alarmModes, alarmStatus, cameraIsWebRtcOnly, cameraSnapshot, cameraStream, loadCameraPlayer, mediaArt, mediaSources, plantReadings, plantStatus, RUNNABLE, SELECTS, runEntity, selectOption, selectOptions, vacuumActions, vacuumStatus } from "../devices";
 
 interface EntityModalProps {
@@ -233,7 +234,7 @@ export function EntityEditSheet({ entityId, hass, linkable, onClose, t }: { enti
     <section className="hd-sheet hd-detail">
       <header className="hd-detail__header">
         <span className="hd-detail__icon"><EntityIcon entity={entity} size={24} /></span>
-        <div><span className="eyebrow">{t("deviceOptions")}</span><EntityName entity={entity} t={t} /></div>
+        <div><span className="eyebrow">{t("deviceOptions")}</span><EntityName entity={entity} t={t} /><EntitySource entity={entity} t={t} /></div>
         <button aria-label={t("close")} className="hd-close" onClick={onClose} type="button"><HDIcon name="close" size={20} /></button>
       </header>
       <DeviceOptions entity={entity} state={hass.states[entityId]} t={t} />
@@ -263,6 +264,8 @@ function DeviceOptions({ entity: opened, state, t }: { entity: DiscoveredEntity;
     </div>
     {switches && <label className="hd-detail__confirm"><span><b>{t("confirmToggle")}</b><small>{t("confirmToggleDescription")}</small></span><input checked={Boolean(entity.confirm)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { confirm: event.target.checked })} type="checkbox" /></label>}
     {colorLight && <label className="hd-detail__confirm"><span><b>{t("lightAccent")}</b><small>{t("lightAccentDescription")}</small></span><input checked={Boolean(entity.light_accent)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { light_accent: event.target.checked })} type="checkbox" /></label>}
+    {entity.domain === "cover" && ([["cover_no_tap", "coverNoTap", "coverNoTapDescription"], ["cover_invert_position", "coverInvertPosition", "coverInvertPositionDescription"], ["cover_invert_state", "coverInvertState", "coverInvertStateDescription"]] as const).map(([flag, label, description]) => <label className="hd-detail__confirm" key={flag}><span><b>{t(label)}</b><small>{t(description)}</small></span><input checked={Boolean(entity[flag])} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { [flag]: event.target.checked })} type="checkbox" /></label>)}
+    {isSecurityKind(entity, state) && <label className="hd-detail__confirm"><span><b>{t("securityItem")}</b><small>{t("securityItemDescription")}</small></span><input checked={!entity.not_security} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { not_security: !event.target.checked })} type="checkbox" /></label>}
   </section>;
 }
 
@@ -307,6 +310,15 @@ function PlantPanel({ hass, state, t }: { hass: HomeAssistant; state: HassEntity
 
 /** The device's name, with a pencil to give it a nickname inside HomeDeck (Home Assistant keeps its
  * own name). An empty name goes back to the one from Home Assistant. */
+/** Where the card comes from: its device in Home Assistant and its entity id, for names that say little. */
+function EntitySource({ entity, t }: { entity: DiscoveredEntity; t: (key: TranslationKey) => string }) {
+  const device = entity.device_name?.trim();
+  return <p className="hd-detail__source">
+    {device && device !== entity.name && <span>{t("entityDevice")}: <b>{device}</b></span>}
+    <code>{entity.entity_id}</code>
+  </p>;
+}
+
 function EntityName({ entity: opened, t }: { entity: DiscoveredEntity; t: (key: TranslationKey) => string }) {
   const customize = useCustomize();
   const entity = customize?.lookup(opened.entity_id) ?? opened;

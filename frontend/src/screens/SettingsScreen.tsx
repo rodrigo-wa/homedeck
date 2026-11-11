@@ -1,10 +1,12 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { HDIcon, isIconName, RoomIcon, type IconName } from "../components/HDIcon";
 import { PageIconPicker } from "../components/RoomOptions";
 import { HDSegmented, HDSelect } from "../components/HDSelect";
+import { NOTICE_OFF_DOMAINS, NOTICE_RUN_DOMAINS } from "../components/HeaderBadges";
 import { domainLabel, type TranslationKey } from "../i18n";
-import type { HomeDeckCondition, HomeDeckBackgroundPreset, HomeDeckBin, HomeDeckBinColor, HomeDeckCardStyle, HomeDeckConfig, HomeDeckPageType } from "../types/config";
+import type { HomeDeckCondition, HomeDeckNoticeTap, HomeDeckBackgroundPreset, HomeDeckBin, HomeDeckBinColor, HomeDeckCardStyle, HomeDeckConfig, HomeDeckPageType } from "../types/config";
 import { ConditionFields } from "../components/ConditionFields";
 import { DashboardImport } from "../components/DashboardImport";
 import { applyImport } from "../dashboardImport";
@@ -108,7 +110,8 @@ export function SettingsScreen({ config, hass, language, onClose, onDraft, onLic
   const plan = usePlan();
   const [managing, setManaging] = useState(false);
   const [iconPage, setIconPage] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
+  // The shell the import sheet opens over: rendered there, not inside the panel, so it centers on the screen.
+  const [importing, setImporting] = useState<Element | null>(null);
   const [imported, setImported] = useState(false);
   const [feedback, setFeedback] = useState(false);
   const [hideHaSidebar, setHideHaSidebar] = useState(hideSidebarPreferred);
@@ -264,6 +267,7 @@ export function SettingsScreen({ config, hass, language, onClose, onDraft, onLic
             <Row label={t("showClock")}><Switch checked={draft.home.show_clock} label={t("showClock")} onChange={(show_clock) => update({ home: { ...draft.home, show_clock } })} /></Row>
             <Row label={t("showWeather")}><Switch checked={draft.home.show_weather} label={t("showWeather")} onChange={(show_weather) => update({ home: { ...draft.home, show_weather } })} /></Row>
             <Row label={t("showPresence")}><Switch checked={draft.home.show_presence} label={t("showPresence")} onChange={(show_presence) => update({ home: { ...draft.home, show_presence } })} /></Row>
+            {draft.home.show_presence && <PresencePeople chosen={draft.home.presence_people ?? []} hass={hass} onChange={(presence_people) => update({ home: { ...draft.home, presence_people } })} t={t} />}
           </section>
           <NoticesPanel hass={hass} home={draft.home} language={language} onChange={(patch) => update({ home: { ...draft.home, ...patch } })} t={t} />
           <section className="st-panel">
@@ -352,13 +356,13 @@ export function SettingsScreen({ config, hass, language, onClose, onDraft, onLic
           </section>
           <section className="st-panel">
             <h2>{t("importTitle")}</h2><p>{t("importPanelHint")}</p>
-            <div className="st-actions"><button className="hd-pill" onClick={() => setImporting(true)} type="button"><HDIcon name="plus" size={16} />{t("importDashboard")}</button></div>
-            {importing && <div aria-label={t("importTitle")} aria-modal="true" className="hd-sheet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setImporting(false); }} role="dialog">
+            <div className="st-actions"><button className="hd-pill" onClick={(event) => setImporting(event.currentTarget.closest(".app-shell"))} type="button"><HDIcon name="plus" size={16} />{t("importDashboard")}</button></div>
+            {importing && createPortal(<div aria-label={t("importTitle")} aria-modal="true" className="hd-sheet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setImporting(null); }} role="dialog">
               <section className="hd-sheet hd-detail hd-import-sheet">
-                <header className="hd-detail__header"><span className="hd-detail__icon"><HDIcon name="grid" size={24} /></span><div><span className="eyebrow">{t("navigation")}</span><h2>{t("importTitle")}</h2></div><button aria-label={t("close")} className="hd-close" onClick={() => setImporting(false)} type="button"><HDIcon name="close" size={20} /></button></header>
-                <DashboardImport hass={hass} onCancel={() => setImporting(false)} onImport={(choice) => { setDraft((current) => applyImport(current, choice.dashboard, { pages: choice.pages, onlyThese: choice.onlyThese, rooms, maxRooms: plan.pro ? undefined : plan.limits.rooms })); setImporting(false); setImported(true); }} t={t} />
+                <header className="hd-detail__header"><span className="hd-detail__icon"><HDIcon name="grid" size={24} /></span><div><span className="eyebrow">{t("navigation")}</span><h2>{t("importTitle")}</h2></div><button aria-label={t("close")} className="hd-close" onClick={() => setImporting(null)} type="button"><HDIcon name="close" size={20} /></button></header>
+                <DashboardImport hass={hass} onCancel={() => setImporting(null)} onImport={(choice) => { setDraft((current) => applyImport(current, choice.dashboard, { pages: choice.pages, onlyThese: choice.onlyThese, rooms, maxRooms: plan.pro ? undefined : plan.limits.rooms })); setImporting(null); setImported(true); }} t={t} />
               </section>
-            </div>}
+            </div>, importing)}
           </section>
         </>;
         })()}
@@ -429,6 +433,7 @@ function CardStylePanel({ cards, locked, onChange, onUpsell, t }: { cards: HomeD
       <Row description={t("frameDescription")} label={t("frame")}><Switch checked={cards.frame} label={t("frame")} onChange={(frame) => onChange({ ...cards, frame })} /></Row>
       <Row description={t("animationsDescription")} label={t("animations")}><Switch checked={Boolean(cards.animations)} label={t("animations")} onChange={(animations) => onChange({ ...cards, animations })} /></Row>
       <Row description={t("sparklinesDescription")} label={t("sparklines")}><Switch checked={Boolean(cards.sparklines)} label={t("sparklines")} onChange={(sparklines) => onChange({ ...cards, sparklines })} /></Row>
+      <Row description={t("sensorSinceDescription")} label={t("sensorSince")}><Switch checked={Boolean(cards.sensor_since)} label={t("sensorSince")} onChange={(sensor_since) => onChange({ ...cards, sensor_since })} /></Row>
       <Row description={t("playersDescription")} label={t("players")}><Switch checked={cards.players !== false} label={t("players")} onChange={(players) => onChange({ ...cards, players })} /></Row>
     </fieldset>{locked && <button aria-label={t("proStyleLocked")} className="st-cards__lock" onClick={onUpsell} type="button" />}</div>
     {!locked && changed && <div className="st-actions"><button className="hd-pill" onClick={() => onChange(DEFAULT_CARDS)} type="button"><HDIcon name="refresh" size={16} />{t("restoreDefaults")}</button></div>}
@@ -622,6 +627,24 @@ function RemoveLicenseButton({ onRemove, t }: { onRemove: () => void; t: (key: T
   return <button className={asking ? "hd-pill hd-pill--danger" : "hd-pill"} onClick={() => { if (asking) { setAsking(false); onRemove(); } else setAsking(true); }} type="button">{asking ? t("proRemoveConfirm") : t("proRemoveAction")}</button>;
 }
 
+/** Which people show in the header: all of them until some are turned off, so new people show up on their own. */
+function PresencePeople({ chosen, hass, onChange, t }: { chosen: string[]; hass: HomeAssistant; onChange: (ids: string[]) => void; t: (key: TranslationKey) => string }) {
+  const people = Object.keys(hass.states).filter((id) => id.startsWith("person.")).sort((a, b) => name(a).localeCompare(name(b)));
+  function name(id: string) { return String(hass.states[id]?.attributes.friendly_name ?? id); }
+  if (people.length < 2) return null;
+  const shown = (id: string) => chosen.length === 0 || chosen.includes(id);
+  const toggle = (id: string, on: boolean) => {
+    const current = chosen.length === 0 ? people : chosen.filter((item) => people.includes(item));
+    const next = on ? [...current, id] : current.filter((item) => item !== id);
+    // Everyone (or nobody, which would empty the header) is saved as "everyone".
+    onChange(next.length === 0 || people.every((item) => next.includes(item)) ? [] : next);
+  };
+  return <div className="st-sub" role="group" aria-label={t("presencePeople")}>
+    <span className="st-sub__title">{t("presencePeople")}</span>
+    {people.map((id) => <label className="st-sub__row" key={id}><span>{name(id)}</span><Switch checked={shown(id)} label={name(id)} onChange={(on) => toggle(id, on)} /></label>)}
+  </div>;
+}
+
 const NOTICE_DOMAINS = ["binary_sensor", "event", "sensor", "cover", "lock", "switch", "input_boolean", "alarm_control_panel", "update", "timer", "vacuum", "light", "fan"];
 
 /** Notices beside the people in the header: the entities chosen here, shown only when they have something to say. */
@@ -630,9 +653,12 @@ function NoticesPanel({ hass, home, language, onChange, t }: { hass: HomeAssista
   const texts = home.badge_texts ?? {};
   const rules = home.badge_rules ?? {};
   const styles = home.badge_styles ?? {};
+  const taps = home.badge_taps ?? {};
   const [ruling, setRuling] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const name = (id: string) => String(hass.states[id]?.attributes.friendly_name ?? id);
+  // Scripts, buttons, automations and scenes a notice can run when tapped.
+  const runnable = useMemo(() => Object.keys(hass.states).filter((id) => NOTICE_RUN_DOMAINS.includes(id.split(".")[0])).sort((a, b) => name(a).localeCompare(name(b))), [ruling]);
   // Every candidate from Home Assistant, grouped by kind (events and unassigned sensors included).
   const groups = useMemo<Room[]>(() => NOTICE_DOMAINS.map((domain) => ({
     id: domain, name: domainLabel(domain, language), icon: null, aliases: [], floor_id: null, device_count: 0,
@@ -644,7 +670,8 @@ function NoticesPanel({ hass, home, language, onChange, t }: { hass: HomeAssista
     const { [id]: _text, ...others } = texts;
     const { [id]: _rule, ...otherRules } = rules;
     const { [id]: _style, ...otherStyles } = styles;
-    onChange(ids.includes(id) ? { badges: ids.filter((item) => item !== id), badge_texts: others, badge_rules: otherRules, badge_styles: otherStyles } : { badges: [...ids, id].slice(0, 12) });
+    const { [id]: _tap, ...otherTaps } = taps;
+    onChange(ids.includes(id) ? { badges: ids.filter((item) => item !== id), badge_texts: others, badge_rules: otherRules, badge_styles: otherStyles, badge_taps: otherTaps } : { badges: [...ids, id].slice(0, 12) });
   };
   const setRule = (id: string, rule: HomeDeckCondition | undefined) => {
     const { [id]: _rule, ...others } = rules;
@@ -654,6 +681,10 @@ function NoticesPanel({ hass, home, language, onChange, t }: { hass: HomeAssista
     const { [id]: _style, ...others } = styles;
     onChange({ badge_styles: style ? { ...others, [id]: style } : others });
   };
+  const setTap = (id: string, tap: HomeDeckNoticeTap | null) => {
+    const { [id]: _tap, ...others } = taps;
+    onChange({ badge_taps: tap ? { ...others, [id]: tap } : others });
+  };
   const setText = (id: string, text: string) => {
     const { [id]: _text, ...others } = texts;
     onChange({ badge_texts: text ? { ...others, [id]: text } : others });
@@ -661,10 +692,13 @@ function NoticesPanel({ hass, home, language, onChange, t }: { hass: HomeAssista
   return <section className="st-panel">
     <h2>{t("noticesTitle")}</h2><p>{t("noticesDescription")}</p>
     {ids.length > 0 && <div className="st-group">
-      {ids.map((id) => <Fragment key={id}><Row description={id} label={name(id)}><div className="st-notice-edit"><button aria-expanded={ruling === id} aria-label={`${t("noticeOptions")}: ${name(id)}`} className={`hd-pill ${rules[id] || styles[id] || texts[id] ? "hd-pill--set" : ""}`} onClick={() => setRuling((open) => open === id ? null : id)} type="button">{t("noticeOptions")}</button><button aria-label={`${t("removeItem")}: ${name(id)}`} className="hd-pill" onClick={() => toggle(id)} type="button"><HDIcon name="minus" size={14} />{t("removeItem")}</button></div></Row>
+      {ids.map((id) => <Fragment key={id}><Row description={id} label={name(id)}><div className="st-notice-edit"><button aria-expanded={ruling === id} aria-label={`${t("noticeOptions")}: ${name(id)}`} className={`hd-pill ${rules[id] || styles[id] || texts[id] || taps[id] ? "hd-pill--set" : ""}`} onClick={() => setRuling((open) => open === id ? null : id)} type="button">{t("noticeOptions")}</button><button aria-label={`${t("removeItem")}: ${name(id)}`} className="hd-pill" onClick={() => toggle(id)} type="button"><HDIcon name="minus" size={14} />{t("removeItem")}</button></div></Row>
         {ruling === id && <div className="st-notice-rules">
           <div className="hd-rules__row"><span className="hd-rules__label">{t("noticeStyle")}</span><div className="room-options__icons" role="radiogroup" aria-label={t("noticeStyle")}>{([["", "noticeStyleBoth"], ["icon", "noticeStyleIcon"], ["text", "noticeStyleText"]] as const).map(([value, label]) => <button aria-checked={(styles[id] ?? "") === value} key={value} onClick={() => setStyle(id, value)} role="radio" type="button">{t(label)}</button>)}</div></div>
           {styles[id] !== "icon" && <div className="hd-rules__row"><span className="hd-rules__label">{t("noticeText")}</span><input aria-label={`${t("noticeText")}: ${name(id)}`} className="st-input st-input--framed" maxLength={40} onChange={(event) => setText(id, event.target.value)} placeholder={name(id)} value={texts[id] ?? ""} /></div>}
+          <div className="hd-rules__row"><span className="hd-rules__label">{t("noticeTap")}</span><div className="room-options__icons" role="radiogroup" aria-label={t("noticeTap")}>{([["", "noticeTapDetails"], ["dismiss", "noticeTapDismiss"], ...(NOTICE_OFF_DOMAINS.has(id.split(".")[0]) ? [["off", "noticeTapOff"] as const] : []), ...(runnable.length > 0 ? [["run", "noticeTapRun"] as const] : [])] as const).map(([value, label]) => <button aria-checked={(taps[id]?.action ?? "") === value} key={value} onClick={() => setTap(id, value ? { action: value, ...(value === "run" ? { target: taps[id]?.target ?? runnable[0] } : {}) } : null)} role="radio" type="button">{t(label)}</button>)}</div></div>
+          {taps[id]?.action === "run" && <div className="hd-rules__row"><span className="hd-rules__label">{t("noticeTapTarget")}</span><HDSelect ariaLabel={t("noticeTapTarget")} onChange={(target) => setTap(id, { action: "run", target })} options={runnable.map((item) => ({ value: item, label: name(item) }))} value={taps[id]?.target && runnable.includes(taps[id]!.target!) ? taps[id]!.target! : runnable[0]} /></div>}
+          {taps[id] && <small>{t("noticeTapHint")}</small>}
           <small>{t("noticeRulesHint")}</small>
           <ConditionFields hass={hass} onChange={(rule) => setRule(id, rule)} t={t} value={rules[id]} />
         </div>}</Fragment>)}

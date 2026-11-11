@@ -101,6 +101,8 @@ export interface HomeDeckConfig {
     show_clock: boolean;
     show_weather: boolean;
     show_presence: boolean;
+    /** The people shown in the header (person entities); everyone when empty. */
+    presence_people?: string[];
     /** Entities shown as small notices beside the presence avatars, only when there is something to notice. */
     badges?: string[];
     /** How each notice looks; icon and text when not set. */
@@ -109,6 +111,8 @@ export interface HomeDeckConfig {
     badge_texts?: Record<string, string>;
     /** When each notice can show, per entity (Pro). */
     badge_rules?: Record<string, HomeDeckCondition>;
+    /** What a tap on each notice does; opens the details when not set. Holding always opens them. */
+    badge_taps?: Record<string, HomeDeckNoticeTap>;
   };
   global_actions: {
     lights_on: boolean;
@@ -215,6 +219,20 @@ export interface HomeDeckEntityOptions {
   light_accent?: boolean;
   /** Outside Edit mode, the card only shows while these rules are met. */
   visible_when?: HomeDeckCondition;
+  /** Left out of Security: its card, its alerts and its screen. */
+  not_security?: boolean;
+  /** Covers: a tap on the card body or icon does nothing; only the up, stop and down buttons act. */
+  cover_no_tap?: boolean;
+  /** Covers that report their position the other way round: the position bar is reversed. */
+  cover_invert_position?: boolean;
+  /** Covers whose open/closed caption comes the other way round: the caption is reversed. */
+  cover_invert_state?: boolean;
+}
+
+/** A tap that dismisses the notice until it changes, turns its entity off or runs a script, button, automation or scene. */
+export interface HomeDeckNoticeTap {
+  action: "dismiss" | "off" | "run";
+  target?: string;
 }
 
 /** One check on an entity: on or off, equal or not to a state, above or below a number. */
@@ -251,6 +269,8 @@ export interface HomeDeckCardStyle {
   sparklines?: boolean;
   /** Every media player (not just Spotify) uses the player card and the full-screen player. On by default. */
   players?: boolean;
+  /** Sensor cards at 1x and ½x also show how long ago they changed. */
+  sensor_since?: boolean;
 }
 
 export type HomeDeckBinColor = "black" | "brown" | "green" | "blue" | "yellow" | "grey" | "red";

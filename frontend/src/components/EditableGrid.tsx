@@ -9,13 +9,13 @@ import { conditionMet, useCustomize, useMinute } from "../personalize";
 import { EntityEditSheet } from "./EntityModal";
 import { RoomCardSheet } from "./CardLinks";
 import type { HomeAssistant } from "../types/home-assistant";
-import { isSectionKey, SECTION_PREFIX, showItem, withSections } from "../layout";
+import { isSectionKey, isSensorKey, SECTION_PREFIX, showItem, withSections } from "../layout";
 
 /** True inside a double-size tile, so cards can offer more controls there. */
 const WideTile = createContext(false);
 export const useWideTile = () => useContext(WideTile);
 /** Sensors can also be small: half the height of a normal card. */
-const canBeSmall = (key: string) => /^entity:(sensor|binary_sensor)\./.test(key);
+const canBeSmall = isSensorKey;
 type CardSize = "small" | "normal" | "double" | "large" | "x6" | "x8" | "c4" | "c9" | "c16";
 const SIZE_LABELS: Partial<Record<CardSize, TranslationKey>> = { small: "sizeSmall", normal: "sizeNormal", double: "sizeDouble", large: "sizeLarge" };
 const SIZE_MARKS: Record<CardSize, string> = { small: "½×", normal: "1×", double: "2×", large: "4×", x6: "6×", x8: "8×", c4: "4×", c9: "9×", c16: "16×" };

@@ -173,10 +173,13 @@ function VerticalSlider({ disabled, label, onCommit, value }: { disabled: boolea
 }
 
 function CoverControls({ entity, state, t, call }: WideProps & { call: Call }) {
-  const position = num(state.attributes.current_position);
+  const reported = num(state.attributes.current_position);
+  // A reversed cover shows (and is set with) the position the other way round.
+  const flip = (value: number) => (entity.cover_invert_position ? 100 - value : value);
+  const position = reported == null ? null : flip(reported);
   const canSet = position != null && Boolean(Number(state.attributes.supported_features) & COVER_SET_POSITION);
   return <div className="tile-wide__controls tile-cover">
-    {position != null && <VerticalSlider disabled={!canSet} label={`${t("setPosition")}: ${entity.name}`} onCommit={(value) => call("cover", "set_cover_position", { position: value })} value={position} />}
+    {position != null && <VerticalSlider disabled={!canSet} label={`${t("setPosition")}: ${entity.name}`} onCommit={(value) => call("cover", "set_cover_position", { position: flip(value) })} value={position} />}
     <div className="tile-buttons tile-buttons--vertical">
       <button aria-label={t("openCover")} onClick={() => call("cover", "open_cover")} type="button"><span className="rotate-up"><HDIcon name="chevron" size={18} /></span></button>
       <button aria-label={t("stopCover")} onClick={() => call("cover", "stop_cover")} type="button"><HDIcon name="stop" size={14} /></button>
@@ -255,8 +258,9 @@ function LockControls({ state, t, call }: WideProps & { call: Call }) {
 /** Double-size vacuum: start or pause, stop and back to the dock, each with its label. */
 function VacuumControls({ hass, state, t }: WideProps) {
   const actions = vacuumActions(hass, state, t);
-  return <div className="tile-wide__controls"><div className="tile-buttons">
-    {[actions.main, actions.stop, actions.dock].map((action) => <button key={action.label} onClick={() => void action.run()} type="button"><HDIcon name={action.icon} size={15} />{action.label}</button>)}
+  // The three share the width; a label that still doesn't fit (long translations) ends in "…", the full text stays in the tooltip.
+  return <div className="tile-wide__controls"><div className="tile-buttons tile-buttons--vacuum">
+    {[actions.main, actions.stop, actions.dock].map((action) => <button aria-label={action.label} key={action.label} onClick={() => void action.run()} title={action.label} type="button"><HDIcon name={action.icon} size={15} /><span className="tile-buttons__label">{action.label}</span></button>)}
   </div></div>;
 }
 
@@ -270,7 +274,7 @@ function SelectControls({ entity, hass, state, t }: WideProps) {
   </div></div>;
 }
 
-function since(value: unknown, language?: string): string {
+export function since(value: unknown, language?: string): string {
   const time = typeof value === "string" ? Date.parse(value) : NaN;
   if (!Number.isFinite(time)) return "";
   const minutes = Math.round((time - Date.now()) / 60_000);

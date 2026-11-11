@@ -16,6 +16,7 @@ class HomeDeckHeaderConfig(TypedDict):
     show_clock: bool
     show_weather: bool
     show_presence: bool
+    presence_people: list[str]
     badges: list[str]
 
 
@@ -239,6 +240,7 @@ def default_config() -> HomeDeckConfig:
             "show_clock": True,
             "show_weather": True,
             "show_presence": True,
+            "presence_people": [],
             "badges": [],
         },
         "global_actions": {

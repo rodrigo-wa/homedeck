@@ -23,6 +23,9 @@ export function applyAudience(data: DiscoveryResponse, hiddenFor: HomeDeckConfig
 /** A light the room shows (not hidden from it in Edit mode): the ones counted and switched together. */
 export const isRoomLight = (entity: DiscoveredEntity) => entity.domain === "light" && !entity.hidden;
 
+/** The cover options copied onto each card (see HomeDeckEntityOptions). */
+const COVER_FLAGS = ["cover_no_tap", "cover_invert_position", "cover_invert_state"] as const;
+
 export function personalize(data: DiscoveryResponse, names: HomeDeckConfig["names"], rooms: HomeDeckConfig["rooms"] | undefined, entityOptions?: HomeDeckConfig["entity_options"], haIcons = false, layouts?: HomeDeckConfig["layouts"], haRoomIcons = false): DiscoveryResponse {
   const nicknames = names ?? {};
   const options = rooms ?? {};
@@ -47,8 +50,8 @@ export function personalize(data: DiscoveryResponse, names: HomeDeckConfig["name
           // The tile's icon: the one chosen for this device, else Home Assistant's when that option is on.
           const icon = own.icon || (haIcons && entity.icon?.includes(":") ? "ha" : undefined);
           const off = hidden.has(`entity:${entity.entity_id}`);
-          if (!nickname && !icon && !own.confirm && !own.light_accent && !own.visible_when && !off) return entity;
-          return { ...entity, ...(nickname ? { name: nickname, original_name: entity.name } : {}), ...(icon ? { display_icon: icon } : {}), ...(own.confirm ? { confirm: true } : {}), ...(own.light_accent ? { light_accent: true } : {}), ...(own.visible_when ? { visible_when: own.visible_when } : {}), ...(off ? { hidden: true } : {}) };
+          if (!nickname && !icon && !own.confirm && !own.light_accent && !own.visible_when && !own.not_security && !COVER_FLAGS.some((flag) => own[flag]) && !off) return entity;
+          return { ...entity, ...(nickname ? { name: nickname, original_name: entity.name } : {}), ...(icon ? { display_icon: icon } : {}), ...(own.confirm ? { confirm: true } : {}), ...(own.light_accent ? { light_accent: true } : {}), ...(own.visible_when ? { visible_when: own.visible_when } : {}), ...(own.not_security ? { not_security: true } : {}), ...Object.fromEntries(COVER_FLAGS.filter((flag) => own[flag]).map((flag) => [flag, true])), ...(off ? { hidden: true } : {}) };
         }),
       };
     }),

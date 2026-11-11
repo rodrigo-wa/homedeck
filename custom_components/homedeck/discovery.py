@@ -27,7 +27,7 @@ def _entity_name(state: Any, registry_entry: Any | None) -> str:
 
 
 def _entity_payload(
-    state: Any, registry_entry: Any | None, area_id: str
+    state: Any, registry_entry: Any | None, area_id: str, device: Any | None = None
 ) -> dict[str, Any]:
     """Serialize discovery metadata; live state remains sourced from hass.states."""
     domain = state.entity_id.split(".", 1)[0]
@@ -40,6 +40,8 @@ def _entity_payload(
         "device_class": state.attributes.get("device_class"),
         "icon": state.attributes.get("icon"),
         "platform": registry_entry.platform if registry_entry else None,
+        # The device it belongs to, so an entity with a generic name can be told apart.
+        "device_name": (device.name_by_user or device.name) if device is not None else None,
     }
 
 
@@ -77,7 +79,7 @@ def discover_home(hass: HomeAssistant) -> dict[str, Any]:
         )
 
         room_entities[area_id].append(
-            _entity_payload(state, registry_entry, area_id)
+            _entity_payload(state, registry_entry, area_id, device)
         )
         if device is not None:
             room_devices[area_id].add(device.id)

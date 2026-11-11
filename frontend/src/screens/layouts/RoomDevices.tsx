@@ -3,12 +3,13 @@ import type { ReactNode } from "react";
 import { EditableGrid } from "../../components/EditableGrid";
 import { EntityPicker } from "../../components/EntityPicker";
 import { RoomOptions } from "../../components/RoomOptions";
-import { HOME_SCREEN, keyId, roomKey } from "../../layout";
+import { HOME_SCREEN, keyId, roomKey, SIDEBAR_SCREEN } from "../../layout";
+import type { ScreenLayout } from "../../types/config";
 import { usePlan } from "../../plan";
 import type { DiscoveredEntity, Room } from "../../types/discovery";
 import type { ScreenProps } from "../types";
 import { orderedRooms, roomItems, subsetLayout } from "./shared";
-import { arrange, entityKey, getLayout, pickerRooms, showItem } from "../../layout";
+import { arrange, compactSensors, entityKey, getLayout, pickerRooms, showItem } from "../../layout";
 
 interface RoomDevicesProps {
   className: string;
@@ -27,7 +28,7 @@ export function RoomDevices({ className, props, render, room, sizable = false }:
   const setAdded = (ids: string[]) => onLayout(screen, { ...layout, added: ids });
 
   return <>
-    {editing && <RoomOptions allRooms={allRooms} hass={hass} room={room} t={t} />}
+    {editing && <RoomOptions allRooms={allRooms} compact={sizable ? compactSensors(layout, visible, (next) => onLayout(screen, next)) : undefined} hass={hass} room={room} t={t} />}
     <EditableGrid
       hass={hass}
       addLabel={t("addDevices")}
@@ -51,6 +52,38 @@ export function RoomDevices({ className, props, render, room, sizable = false }:
 }
 
 /** Rooms in any layout: drag and hide in edit mode, saved on Home without moving its other items. */
+/** The sidebar's room list, separate from the room cards on Home: its own order and hidden rooms once
+ * it has a layout, else Home's (so nothing changes until it is edited). Edits always save to its own. */
+export function useSidebarRoomList(props: ScreenProps) {
+  const { config, data, onLayout, t } = props;
+  const keys = data.rooms.map((room) => roomKey(room.id));
+  const byKey = new Map(data.rooms.map((room) => [roomKey(room.id), room]));
+  const own = config.layouts?.[SIDEBAR_SCREEN];
+  const home = getLayout(config, HOME_SCREEN);
+  const isRoom = (key: string) => key.startsWith("room:");
+  const layout: ScreenLayout = own ?? { order: home.order.filter(isRoom), hidden: home.hidden.filter(isRoom), wide: [] };
+  const { visible, hidden } = arrange(keys, layout);
+  return {
+    rooms: visible.map((key) => byKey.get(key)!).filter(Boolean),
+    layout,
+    hiddenItems: hidden.map((key) => ({ key, label: byKey.get(key)?.id === "__unassigned__" ? t("unassigned") : byKey.get(key)?.name ?? keyId(key) })),
+    onLayout: (next: ScreenLayout) => onLayout(SIDEBAR_SCREEN, { order: next.order.filter(isRoom), hidden: next.hidden.filter(isRoom), wide: [] }),
+  };
+}
+
+/** Before the room cards on Home are first changed in the sidebar layout, the sidebar keeps the rooms
+ * hidden so far and from then on follows the room order in Settings, so hiding a card no longer hides its room there. */
+export function detachSidebar(props: ScreenProps): ScreenProps["onLayout"] {
+  const { config, onLayout } = props;
+  return (screen, next) => {
+    if (screen === HOME_SCREEN && !config.layouts?.[SIDEBAR_SCREEN]) {
+      const home = getLayout(config, HOME_SCREEN);
+      onLayout(SIDEBAR_SCREEN, { order: [], hidden: home.hidden.filter((key) => key.startsWith("room:")), wide: [] });
+    }
+    onLayout(screen, next);
+  };
+}
+
 export function useRoomList(props: ScreenProps) {
   const { config, data, onLayout, t } = props;
   const layout = getLayout(config, HOME_SCREEN);

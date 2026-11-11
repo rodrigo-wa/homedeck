@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.16.6
+
+- Security item: in the details of a door, window or motion sensor, or a lock, turn off "Security item" to leave it out of the Security card, its alerts and the Security screen. It still shows in its room.
+- Tap action for header notices: in Settings → Home → Notices → Options, each notice can open its details (default), be dismissed (hidden on every screen until the entity changes again), turn its entity off or run a script, button, automation or scene. These ask for a second tap, and holding a notice always opens its details.
+- Covers (card options in Edit mode): "Only the buttons act" makes a tap on the card or its icon do nothing; "Reverse the position bar" and "Reverse open and closed", separately, for covers that report their position the other way round.
+- Time since the last change (optional, in Settings → Cards): sensor cards at 1× and ½× also show how long ago they changed.
+- Sidebar layout: the room list in the sidebar is now separate from the room cards on the overview. Hiding a card no longer removes its room from the sidebar, the sidebar follows the room order in Settings → Rooms, and in Edit mode it can be reordered and have rooms hidden on its own.
+- Vacuum card at double and large size: the three buttons are stacked with their full labels, so they fit the card in every language.
+- People in the header: in Settings → Home, choose which people show in the presence avatars. With nothing chosen, everyone shows, as before.
+- Compact sensors (optional, in the room options in Edit mode): every sensor in the room at ½×, with icon, name and value on one line.
+- Where each card comes from: in Edit mode, a card's options show the Home Assistant device the entity belongs to and its entity ID.
+- Fixed: devices on a room card covered the temperature. The temperature now stays in the left half, on a large (4×) card the devices take the full width above the name, and on short screens the card grows just enough to clear the power button.
+- Fixed: the import dashboard window opens centered on the screen with its full title, and the Cancel and Import buttons match.
+
 ## 0.16.5
 
 - Import a Home Assistant dashboard: during setup or in Settings → Navigation, pick a dashboard you already use. Each tab becomes a HomeDeck screen (Pro) with the same devices, in the same order, with section titles as separators, and the rooms can show only what's in that dashboard. Nothing changes in Home Assistant.

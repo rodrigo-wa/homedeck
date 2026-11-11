@@ -7,7 +7,7 @@ import { EntityModal } from "../components/EntityModal";
 import { EntityPicker } from "../components/EntityPicker";
 import { RoomOptions } from "../components/RoomOptions";
 import { HDIcon, RoomIcon } from "../components/HDIcon";
-import { arrange, entityKey, getLayout, keyId, pickerRooms, roomScreen, showItem } from "../layout";
+import { arrange, compactSensors, entityKey, getLayout, keyId, pickerRooms, roomScreen, showItem } from "../layout";
 import type { DiscoveredEntity, Room } from "../types/discovery";
 import { entityIndex, type ScreenProps } from "./types";
 import { usePlan } from "../plan";
@@ -62,7 +62,7 @@ export function RoomScreen(props: ScreenProps & { onSelectRoom: (roomId: string)
             {lights.length > 0 && !editing && <div className="room-actions"><button disabled={busy} onClick={() => void setRoomLights("turn_on")} type="button"><HDIcon name="light" size={18} />{t("turnOn")}</button><button className="room-actions__primary" disabled={busy} onClick={() => void setRoomLights("turn_off")} type="button"><HDIcon name="power" size={18} />{t("turnOff")}</button></div>}
           </header>
           {editing && <p className="edit-hint">{t("editHint")}</p>}
-          {editing && <RoomOptions allRooms={allRooms} hass={hass} room={room} t={t} />}
+          {editing && <RoomOptions allRooms={allRooms} compact={compactSensors(layout, visible, (next) => onLayout(screen, next))} hass={hass} room={room} t={t} />}
           {visible.length === 0 && !editing
             ? <section className="empty-state"><p>{t("noVisibleEntities")}</p></section>
             : <EditableGrid

@@ -35,7 +35,7 @@ export function IconChooser({ action, children, current, label }: { action: stri
 
 /** Edit mode, on a room: its icon and the sensor that gives its temperature. "Automatic" keeps the
  * icon guessed from the name and the temperature of the climate device, as before. */
-export function RoomOptions({ allRooms, hass, room, t }: { allRooms: Room[]; hass: HomeAssistant; room: Room; t: (key: TranslationKey) => string }) {
+export function RoomOptions({ allRooms, compact, hass, room, t }: { allRooms: Room[]; compact?: { on: boolean; onChange: (on: boolean) => void }; hass: HomeAssistant; room: Room; t: (key: TranslationKey) => string }) {
   const customize = useCustomize();
   if (!customize || room.id === "__unassigned__") return null;
   const chosen = room.display_icon ?? "";
@@ -64,6 +64,7 @@ export function RoomOptions({ allRooms, hass, room, t }: { allRooms: Room[]; has
       <span className="eyebrow">{t("roomTemperature")}</span>
       <HDSelect ariaLabel={t("roomTemperature")} className="room-options__select" onChange={(temperature) => customize.setRoom(room.id, { temperature })} options={options} value={room.temperature_entity ?? ""} />
     </label>
+    {compact && <label className="hd-detail__confirm room-options__compact"><span><b>{t("compactSensors")}</b><small>{t("compactSensorsDescription")}</small></span><input checked={compact.on} className="st-switch" onChange={(event) => compact.onChange(event.target.checked)} type="checkbox" /></label>}
     <AudienceEditor hass={hass} itemKey={`room:${room.id}`} t={t} />
   </section>;
 }

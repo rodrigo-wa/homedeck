@@ -1,14 +1,14 @@
-import { useCustomize } from "../personalize";
+import { useCustomize, useMinute } from "../personalize";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, MouseEvent, PointerEvent } from "react";
 import { hvacLabel, type TranslationKey } from "../i18n";
 import type { DiscoveredEntity } from "../types/discovery";
 import type { HassEntity, HomeAssistant } from "../types/home-assistant";
 import { useTallTile, useWideTile } from "./EditableGrid";
-import { isNumericState, useHistory, useSparklines } from "../history";
+import { isNumericState, useHistory, useSensorSince, useSparklines } from "../history";
 import { Sparkline } from "./HistoryChart";
 import { EntityIcon, HDIcon } from "./HDIcon";
-import { WideControls } from "./WideControls";
+import { since, WideControls } from "./WideControls";
 import { CameraCard } from "./CameraCard";
 import { HDSelect } from "./HDSelect";
 import { friendlyDate, ALARM_ARMED, RUNNABLE, SELECTS, alarmStatus, mediaArt, plantStatus, runEntity, selectOption, selectOptions, vacuumActions, vacuumStatus } from "../devices";
@@ -53,8 +53,11 @@ export function displayState(state: HassEntity | undefined, entity: DiscoveredEn
     return typeof current === "number" ? `${current}° · ${hvacLabel(state.state, language)}` : hvacLabel(state.state, language);
   }
   if (entity.domain === "cover") {
-    const position = state.attributes.current_position;
+    const reported = state.attributes.current_position;
+    // A cover whose caption comes the other way round: open and closed (and the %) are reversed.
+    const position = typeof reported === "number" && entity.cover_invert_state ? 100 - reported : reported;
     if (typeof position === "number") return position === 0 ? t("closed") : position === 100 ? t("open") : `${position}%`;
+    if (entity.cover_invert_state && (state.state === "open" || state.state === "closed")) return t(state.state === "open" ? "closed" : "open");
   }
   if (entity.domain === "lock") return state.state === "locked" ? t("lock") : t("unlock");
   if (entity.domain === "vacuum") return vacuumStatus(state, t);
@@ -114,6 +117,10 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
   const rgb = entity.light_accent && state?.state === "on" && Array.isArray(state.attributes.rgb_color) ? state.attributes.rgb_color.map(Number) : null;
   const lightAccent = rgb ? { "--lc": `rgb(${rgb.join(",")})`, "--on-ink": (rgb[0] * 299 + rgb[1] * 587 + rgb[2] * 114) / 1000 > 150 ? "#2a2110" : "#ffffff" } as CSSProperties : undefined;
   const status = useMemo(() => displayState(state, entity, t, language), [state, entity, t, language]);
+  // Settings → Cards: sensors at 1x and ½x also say how long ago they changed (2x always does).
+  const showSince = useSensorSince() && !wide && (entity.domain === "sensor" || entity.domain === "binary_sensor") && Boolean(state) && !["unavailable", "unknown"].includes(state?.state ?? "");
+  const minute = useMinute(showSince);
+  const sinceText = useMemo(() => (showSince ? since(state?.last_changed, language) : ""), [showSince, state?.last_changed, language, minute]);
   const brightness = typeof state?.attributes.brightness === "number" ? Math.round((state.attributes.brightness / 255) * 100) : 0;
   const colorModes = Array.isArray(state?.attributes.supported_color_modes) ? state.attributes.supported_color_modes : [];
   // Modern lights advertise dimming through color modes; bit 1 of supported_features is the legacy flag.
@@ -133,7 +140,9 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
   const [confirming, setConfirming] = useState(false);
   const confirmTimer = useRef<number | null>(null);
   useEffect(() => () => { if (confirmTimer.current != null) window.clearTimeout(confirmTimer.current); }, []);
-  const acts = TOGGLES.has(entity.domain) || ["scene", "cover"].includes(entity.domain) || RUNNABLE.has(entity.domain);
+  // A cover set to ignore taps on its body keeps only its up, stop and down buttons.
+  const quietCover = entity.domain === "cover" && Boolean(entity.cover_no_tap);
+  const acts = TOGGLES.has(entity.domain) || (["scene", "cover"].includes(entity.domain) && !quietCover) || RUNNABLE.has(entity.domain);
   const confirmLabel = entity.domain === "cover" ? (state?.state === "open" || state?.state === "opening" ? t("confirmClose") : t("confirmOpen"))
     : entity.domain === "scene" || RUNNABLE.has(entity.domain) ? t("confirmRun")
         : active ? t("confirmTurnOff") : t("confirmTurnOn");
@@ -148,7 +157,7 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
     if (TOGGLES.has(domain)) return void run(() => hass.callService("homeassistant", "toggle", { entity_id: entity.entity_id }));
     if (domain === "scene") return void run(() => hass.callService("scene", "turn_on", { entity_id: entity.entity_id }));
     if (RUNNABLE.has(domain)) return void run(() => runEntity(hass, entity.entity_id));
-    if (domain === "cover") return void run(() => hass.callService("cover", "toggle", { entity_id: entity.entity_id }));
+    if (domain === "cover") return quietCover ? undefined : void run(() => hass.callService("cover", "toggle", { entity_id: entity.entity_id }));
     onLongPress(entity);
   };
 
@@ -211,7 +220,7 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
       {!wide && entity.domain === "light" && !unavailable && dimmable && (
         <label className={state?.state === "on" ? "device-dimmer" : "device-dimmer device-dimmer--off"} style={{ "--value": `${brightnessDraft ?? brightness}%` } as CSSProperties}><span className="sr-only">{t("brightness")}</span><b aria-hidden="true" /><input aria-label={`${t("brightness")}: ${entity.name}`} max="100" min="1" onChange={(event) => setBrightnessDraft(Number(event.currentTarget.value))} onKeyUp={commitKey} onPointerUp={(event) => setBrightness(Number(event.currentTarget.value))} type="range" value={brightnessDraft ?? Math.max(1, brightness)} /></label>
       )}
-      <div className="device-tile__copy"><strong>{entity.name}</strong>{entity.domain !== "scene" && !(SELECTS.has(entity.domain) && !wide) && <span>{status}</span>}</div>
+      <div className="device-tile__copy"><strong>{entity.name}</strong>{entity.domain !== "scene" && !(SELECTS.has(entity.domain) && !wide) && <span>{status}</span>}{showSince && sinceText && <small className="device-tile__since">{sinceText}</small>}</div>
 
       {wide && entity.domain === "sensor" && isNumericState(state) && <SensorSpark entityId={entity.entity_id} language={language} hass={hass} unit={typeof state?.attributes.unit_of_measurement === "string" ? state.attributes.unit_of_measurement : undefined} />}
       {wide && !unavailable && state && <div className="tile-wide">{SELECTS.has(entity.domain) && (customize?.linksFor(`entity:${entity.entity_id}`).length ?? 0) > 0

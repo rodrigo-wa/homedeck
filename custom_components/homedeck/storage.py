@@ -238,6 +238,10 @@ def _normalize_condition(value: Any) -> dict[str, Any] | None:
     return clean or None
 
 
+# What a notice can run when tapped: a script, a button, an automation or a scene.
+_TAP_RUN_DOMAINS = ("script", "button", "input_button", "automation", "scene")
+
+
 def _normalize_entity_options(value: Any) -> dict[str, dict[str, Any]]:
     """Per device: its tile icon ("ha" or a HomeDeck icon name) and whether a tap asks to confirm."""
     if not isinstance(value, dict):
@@ -254,6 +258,9 @@ def _normalize_entity_options(value: Any) -> dict[str, dict[str, Any]]:
             clean["confirm"] = True
         if options.get("light_accent") is True:
             clean["light_accent"] = True
+        for flag in ("not_security", "cover_no_tap", "cover_invert_position", "cover_invert_state"):
+            if options.get(flag) is True:
+                clean[flag] = True
         when = _normalize_condition(options.get("visible_when"))
         if when:
             clean["visible_when"] = when
@@ -388,6 +395,10 @@ def normalize_config(value: Any) -> HomeDeckConfig:
         for key in ("show_clock", "show_weather", "show_presence"):
             if isinstance(home.get(key), bool):
                 config["home"][key] = home[key]
+        # The people shown in the header; everyone when the list is empty.
+        config["home"]["presence_people"] = [
+            item for item in _unique_strings(home.get("presence_people")) if item.startswith("person.") and _BADGE_ENTITY.match(item)
+        ][:20]
         # Entities shown as small notices beside the presence avatars (mailbox, doorbell...).
         config["home"]["badges"] = [
             item for item in _unique_strings(home.get("badges")) if _BADGE_ENTITY.match(item)
@@ -403,6 +414,19 @@ def normalize_config(value: Any) -> HomeDeckConfig:
         if isinstance(rules, dict):
             clean_rules = {entity_id: _normalize_condition(rule) for entity_id, rule in rules.items() if entity_id in config["home"]["badges"]}
             config["home"]["badge_rules"] = {entity_id: rule for entity_id, rule in clean_rules.items() if rule}
+        taps = home.get("badge_taps")
+        if isinstance(taps, dict):
+            clean_taps: dict[str, dict[str, str]] = {}
+            for entity_id, tap in taps.items():
+                if entity_id not in config["home"]["badges"] or not isinstance(tap, dict):
+                    continue
+                action = tap.get("action")
+                target = tap.get("target")
+                if action in ("dismiss", "off"):
+                    clean_taps[entity_id] = {"action": action}
+                elif action == "run" and isinstance(target, str) and _BADGE_ENTITY.match(target) and target.split(".")[0] in _TAP_RUN_DOMAINS:
+                    clean_taps[entity_id] = {"action": "run", "target": target}
+            config["home"]["badge_taps"] = clean_taps
         texts = home.get("badge_texts")
         if isinstance(texts, dict):
             config["home"]["badge_texts"] = {
@@ -503,7 +527,7 @@ def normalize_config(value: Any) -> HomeDeckConfig:
             number = cards.get(key)
             if isinstance(number, (int, float)) and not isinstance(number, bool):
                 config["cards"][key] = max(0, min(high, round(number)))
-        for key in ("frame", "animations", "sparklines", "players"):
+        for key in ("frame", "animations", "sparklines", "players", "sensor_since"):
             if isinstance(cards.get(key), bool):
                 config["cards"][key] = cards[key]
 

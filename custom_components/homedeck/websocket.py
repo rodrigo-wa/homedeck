@@ -6,6 +6,7 @@ import voluptuous as vol
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DOMAIN
 from .discovery import discover_home
@@ -25,6 +26,7 @@ from .license import (
     async_portal,
     async_refresh,
 )
+from .notices import SIGNAL_DISMISSED, async_dismiss, async_dismissed
 from .storage import async_load_config, async_save_config, normalize_config
 
 _COMMANDS_REGISTERED = "commands_registered"
@@ -219,6 +221,40 @@ async def websocket_feedback(
         connection.send_error(msg["id"], str(err), "The feedback could not be sent")
 
 
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/notices/subscribe"})
+@websocket_api.async_response
+async def websocket_notices_subscribe(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Send the dismissed notices now and again whenever a screen dismisses one."""
+
+    @callback
+    def forward(dismissed: dict[str, str]) -> None:
+        connection.send_message(websocket_api.event_message(msg["id"], {"dismissed": dismissed}))
+
+    connection.subscriptions[msg["id"]] = async_dispatcher_connect(hass, SIGNAL_DISMISSED, forward)
+    connection.send_result(msg["id"])
+    forward(await async_dismissed(hass))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/notices/dismiss",
+        vol.Required("entity_id"): vol.All(str, vol.Length(max=255)),
+    }
+)
+@websocket_api.async_response
+async def websocket_notices_dismiss(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Hide a header notice on every screen until its entity changes again."""
+    connection.send_result(msg["id"], {"dismissed": await async_dismiss(hass, msg["entity_id"])})
+
+
 def async_register_websocket_commands(hass: HomeAssistant) -> None:
     """Register HomeDeck commands once per Home Assistant process."""
     domain_data = hass.data.setdefault(DOMAIN, {})
@@ -235,4 +271,6 @@ def async_register_websocket_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_license_claim)
     websocket_api.async_register_command(hass, websocket_license_portal)
     websocket_api.async_register_command(hass, websocket_feedback)
+    websocket_api.async_register_command(hass, websocket_notices_subscribe)
+    websocket_api.async_register_command(hass, websocket_notices_dismiss)
     domain_data[_COMMANDS_REGISTERED] = True

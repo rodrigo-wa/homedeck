@@ -57,7 +57,9 @@ export function ContextHeader({ config, hass, language, onSettings, part = "all"
     return () => window.clearInterval(timer);
   }, []);
 
-  const people = useMemo(() => Object.values(hass.states).filter((state) => state.entity_id.startsWith("person.")), [hass.states]);
+  // Everyone in Home Assistant, or only the people chosen in Settings → Home.
+  const chosenPeople = config.home.presence_people ?? [];
+  const people = useMemo(() => Object.values(hass.states).filter((state) => state.entity_id.startsWith("person.") && (chosenPeople.length === 0 || chosenPeople.includes(state.entity_id))), [hass.states, chosenPeople.join()]);
   const presentPeople = people.filter((person) => person.state === "home");
   const date = new Intl.DateTimeFormat(language, { weekday: "long", day: "2-digit", month: "long" }).format(now);
   const time = new Intl.DateTimeFormat(language, { hour: "2-digit", minute: "2-digit" }).format(now);
@@ -70,7 +72,7 @@ export function ContextHeader({ config, hass, language, onSettings, part = "all"
       <header className={part === "all" ? "context-header" : `context-header context-header--${part}`} ref={headerRef}>
         {part !== "status" && <div className="context-header__clock"><span>{date}{occasion && <b className={occasion.phase === "day" ? "hd-season-badge hd-season-badge--day" : "hd-season-badge"}>{occasion.badge}</b>}</span><div className="context-header__time">{config.home.show_clock && <strong>{time}</strong>}<AgendaButtons config={config} hass={hass} language={language} t={t} /></div></div>}
         {part !== "clock" && <div className="context-header__right">
-          {(config.home.badges?.length ?? 0) > 0 && <HeaderBadges hass={hass} ids={config.home.badges!.filter((id) => !customize?.restricted(`entity:${id}`))} language={language} rules={config.home.badge_rules} styles={config.home.badge_styles} t={t} texts={config.home.badge_texts} />}
+          {(config.home.badges?.length ?? 0) > 0 && <HeaderBadges hass={hass} ids={config.home.badges!.filter((id) => !customize?.restricted(`entity:${id}`))} language={language} rules={config.home.badge_rules} styles={config.home.badge_styles} t={t} taps={config.home.badge_taps} texts={config.home.badge_texts} />}
           {config.home.show_weather && weather && (
             <button className="weather-chip" onClick={() => setForecastOpen(true)} title={t("weatherForecast")} type="button">
               <HDIcon name={conditionIcon(condition)} size={20} />

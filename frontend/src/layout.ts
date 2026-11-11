@@ -6,6 +6,8 @@ import type { DiscoveryResponse, Room } from "./types/discovery";
 //   hidden – item keys hidden from that screen
 //   wide   – item keys shown as double-width cards
 export const HOME_SCREEN = "home";
+/** The sidebar layout's own room list, once it has one; until then it follows the room cards on Home. */
+export const SIDEBAR_SCREEN = "sidebar";
 export const roomScreen = (roomId: string) => `room:${roomId}`;
 export const pageScreen = (pageId: string) => `page:${pageId}`;
 
@@ -84,6 +86,28 @@ export function setHidden(layout: ScreenLayout, key: string, hidden: boolean): S
 
 /** Shows a hidden item at the end of the screen; `shown` is the current order on screen. Placing it in
  * the order also confirms an opt-in device. */
+/** Sensor cards, the ones that can be ½×. */
+export const isSensorKey = (key: string) => /^entity:(sensor|binary_sensor)\./.test(key);
+
+/** All the room's sensors at ½× (one line each), or back to their normal size. */
+export function withCompactSensors(layout: ScreenLayout, keys: string[], on: boolean): ScreenLayout {
+  const sensors = new Set(keys.filter(isSensorKey));
+  const small = (layout.small ?? []).filter((key) => !sensors.has(key));
+  return {
+    ...layout,
+    small: on ? [...small, ...sensors] : small,
+    wide: on ? layout.wide.filter((key) => !sensors.has(key)) : layout.wide,
+    tall: on ? (layout.tall ?? []).filter((key) => !sensors.has(key)) : layout.tall,
+  };
+}
+
+/** The switch for it: shown only while the room has sensors. */
+export function compactSensors(layout: ScreenLayout, keys: string[], apply: (next: ScreenLayout) => void) {
+  const sensors = keys.filter(isSensorKey);
+  if (sensors.length === 0) return undefined;
+  return { on: sensors.every((key) => (layout.small ?? []).includes(key)), onChange: (on: boolean) => apply(withCompactSensors(layout, sensors, on)) };
+}
+
 export function showItem(layout: ScreenLayout, key: string, shown: string[]): ScreenLayout {
   const order = layout.order.includes(key) ? layout.order : [...shown.filter((item) => item !== key), key, ...layout.order.filter((item) => item !== key && !shown.includes(item))];
   return { ...layout, order, hidden: layout.hidden.filter((item) => item !== key) };

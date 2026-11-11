@@ -61,6 +61,9 @@ export function useHistory(hass: HomeAssistant, entityId: string | undefined, ho
 /** Whether double and large sensor cards draw their last 24 hours (Settings → Card style). */
 export const SparklinesContext = createContext(false);
 export const useSparklines = () => useContext(SparklinesContext);
+/** Sensor cards at 1x and ½x also show how long ago they changed (Settings → Cards). */
+export const SensorSinceContext = createContext(false);
+export const useSensorSince = () => useContext(SensorSinceContext);
 
 export function isNumericState(state?: { state: string }): boolean {
   return Boolean(state && Number.isFinite(Number.parseFloat(state.state)) && !/^\d{4}-\d{2}-\d{2}/.test(state.state));

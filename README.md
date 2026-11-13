@@ -22,13 +22,28 @@ someone suggests them.
 
 ## A look inside
 
-### Four layouts, one home
+### Five layouts, one home
 
 | Grid | Sidebar |
 |:---:|:---:|
 | <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/grid.jpg" alt="Grid layout"> | <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/sidebar.jpg" alt="Sidebar layout"> |
 | **List** | **Focus** |
 | <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/list.jpg" alt="List layout"> | <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/focus.jpg" alt="Focus layout"> |
+
+### Kids layout
+
+A playful look for the kids' room or the whole family: chunky colorful cards, rounded letters,
+bouncy animations and six animated scenes (Sky, Ocean, Space, Candy, Enchanted and Road). Each
+tablet can have its own layout and scene, so the kids' room can play while the living room keeps
+the Grid.
+
+| Sky | Ocean |
+|:---:|:---:|
+| <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/kids-home.jpg" alt="Kids layout on Home with the Sky scene, a hot-air balloon and the sun"> | <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/kids-room.jpg" alt="Kids layout in a room with the Ocean scene, fish and a jellyfish"> |
+| **Enchanted** | **Road** |
+| <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/kids-fairy.jpg" alt="Kids layout with the pink Enchanted scene, butterflies and a castle"> | <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/kids-road.jpg" alt="Kids layout in a room with the Road scene, trees and little cars"> |
+
+<p align="center"><img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/kids-phone.jpg" alt="Kids layout on a phone with the Space scene" width="30%"></p>
 
 ### Special dates
 
@@ -96,8 +111,8 @@ on macOS). Your rooms, backgrounds and preferences are kept.
 
 ## What you get
 
-- **Four layouts:** Grid, Sidebar, List and Focus. Every screen, including Media,
-  Security, Scenes and your own pages, follows the one you pick.
+- **Five layouts:** Grid, Sidebar, List, Focus and Kids. Every screen, including Media,
+  Security, Scenes and your own pages, follows the one you pick, and each tablet can have its own.
 - **Bring your dashboard:** import a Home Assistant dashboard you already have, during setup or
   later. Each tab becomes a HomeDeck screen with the same devices in the same order, and the rooms
   can show only what's in it.
@@ -144,15 +159,15 @@ on macOS). Your rooms, backgrounds and preferences are kept.
 - **Doorbell pop-up:** when the doorbell rings, its camera shows up over the panel, even on the
   screensaver.
 - **Spotify player** (with a default speaker per device), a screensaver with today's events and reminders, scene strip,
-  and, for a wall tablet, options to hide the Home Assistant sidebar, lock editing and keep the
-  screen on (automatic on an Echo Show).
+  and, for a wall tablet, options to hide the Home Assistant sidebar, lock editing, a child lock for
+  the cards you choose and keep the screen on (automatic on an Echo Show).
 - **English, Portuguese, Spanish, German and Polish**, following Home Assistant's language.
 
 ## Plans
 
 - **Free:** up to 4 rooms and 10 controllable devices (lights, switches, fans, covers,
   climate, media and locks). Sensors and scenes don't count. Grid and List layouts.
-- **Pro:** unlimited rooms and devices, all four layouts, double and large cards, your own pages,
+- **Pro:** unlimited rooms and devices, all five layouts (the Kids layout included), double and large cards, your own pages,
   the energy card, animations, sensor charts on cards, the doorbell pop-up, special dates, the full media player, the small sensor size,
   camera pages and big camera sizes, devices inside cards, visibility rules, who can see, the waste
   collection card, the screensaver with

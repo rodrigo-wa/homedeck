@@ -43,8 +43,6 @@ the Grid.
 | **Enchanted** | **Road** |
 | <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/kids-fairy.jpg" alt="Kids layout with the pink Enchanted scene, butterflies and a castle"> | <img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/kids-road.jpg" alt="Kids layout in a room with the Road scene, trees and little cars"> |
 
-<p align="center"><img src="https://raw.githubusercontent.com/rodrigo-wa/homedeck/main/images/kids-phone.jpg" alt="Kids layout on a phone with the Space scene" width="30%"></p>
-
 ### Special dates
 
 HomeDeck dresses up for the holidays on its own: a countdown by the clock, a light animation and

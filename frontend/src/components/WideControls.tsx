@@ -5,7 +5,7 @@ import type { DiscoveredEntity } from "../types/discovery";
 import type { HassEntity, HomeAssistant } from "../types/home-assistant";
 import { HDIcon } from "./HDIcon";
 import { HDSelect } from "./HDSelect";
-import { SELECTS, plantReadings, selectOption, selectOptions, vacuumActions } from "../devices";
+import { coverMove, SELECTS, plantReadings, selectOption, selectOptions, vacuumActions } from "../devices";
 
 // Extra controls shown when a card is double size. Every control stops at the card: taps on them
 // never toggle the device underneath.
@@ -181,9 +181,9 @@ function CoverControls({ entity, state, t, call }: WideProps & { call: Call }) {
   return <div className="tile-wide__controls tile-cover">
     {position != null && <VerticalSlider disabled={!canSet} label={`${t("setPosition")}: ${entity.name}`} onCommit={(value) => call("cover", "set_cover_position", { position: flip(value) })} value={position} />}
     <div className="tile-buttons tile-buttons--vertical">
-      <button aria-label={t("openCover")} onClick={() => call("cover", "open_cover")} type="button"><span className="rotate-up"><HDIcon name="chevron" size={18} /></span></button>
+      <button aria-label={t("openCover")} onClick={() => call("cover", coverMove(entity, "up"))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={18} /></span></button>
       <button aria-label={t("stopCover")} onClick={() => call("cover", "stop_cover")} type="button"><HDIcon name="stop" size={14} /></button>
-      <button aria-label={t("closeCover")} onClick={() => call("cover", "close_cover")} type="button"><span className="rotate-down"><HDIcon name="chevron" size={18} /></span></button>
+      <button aria-label={t("closeCover")} onClick={() => call("cover", coverMove(entity, "down"))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={18} /></span></button>
     </div>
   </div>;
 }

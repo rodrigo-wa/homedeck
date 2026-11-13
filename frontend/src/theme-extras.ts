@@ -523,8 +523,9 @@ export const themeExtras = String.raw`
 .app-shell .hd-detail__name > span { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .app-shell .hd-detail__rename { flex: none; display: inline-grid; place-items: center; width: calc(var(--u)*3.4); height: calc(var(--u)*3.4); border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: var(--ink-2); cursor: pointer; }
 .app-shell .hd-detail__naming { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: calc(var(--u)*.8); align-items: center; margin-top: calc(var(--u)*.3); }
-.app-shell .hd-detail__naming input { min-width: 0; height: calc(var(--u)*4.6); padding: 0 calc(var(--u)*1.4); border: 1px solid rgba(255,255,255,.22); border-radius: calc(var(--u)*1.4*var(--hd-r,1)); background: rgba(0,0,0,.18); color: var(--ink); font: 500 calc(var(--u)*2.2)/1 var(--f-body); }
+.app-shell .hd-detail__naming input:not(.st-switch) { min-width: 0; height: calc(var(--u)*4.6); padding: 0 calc(var(--u)*1.4); border: 1px solid rgba(255,255,255,.22); border-radius: calc(var(--u)*1.4*var(--hd-r,1)); background: rgba(0,0,0,.18); color: var(--ink); font: 500 calc(var(--u)*2.2)/1 var(--f-body); }
 .app-shell .hd-detail__naming button { width: calc(var(--u)*4.6); height: calc(var(--u)*4.6); border: 0; border-radius: calc(var(--u)*1.4*var(--hd-r,1)); background: var(--on); color: var(--on-ink, #2a2110); cursor: pointer; display: grid; place-items: center; }
+.app-shell .hd-detail__only-here { grid-column: 1 / -1; display: flex; align-items: center; gap: calc(var(--u)*1); color: var(--ink); font: 600 calc(var(--u)*1.6)/1.3 var(--f-body); cursor: pointer; }
 .app-shell .hd-detail__naming small { grid-column: 1 / -1; color: var(--ink-2); font: 500 calc(var(--u)*1.5)/1.3 var(--f-body); }
 .app-shell .hd-alarm { display: grid; gap: calc(var(--u)*1.2); }
 .app-shell .hd-alarm__code { height: calc(var(--u)*5.6); padding: 0 calc(var(--u)*1.6); border: 1px solid rgba(255,255,255,.22); border-radius: calc(var(--u)*1.8*var(--hd-r,1)); background: rgba(0,0,0,.18); color: var(--ink); font: 600 calc(var(--u)*2.4)/1 var(--f-body); letter-spacing: .3em; text-align: center; }
@@ -855,4 +856,96 @@ export const themeExtras = String.raw`
   .app-shell .camera-page { --cols: var(--cols-phone); }
   .app-shell .camera-grid .hd-item:is(.hd-item--c9, .hd-item--c16) { grid-column: span 2; grid-row: span 2; }
 }
+
+/* Home on tablets lying down (Echo Show, iPad, Fire...): always 6 columns, so every tablet shows Home the same
+   way, big touch screens such as an Echo Show 15 included. Phones keep 2; tablets standing up and computer
+   screens still fit as many as their width allows. */
+@media (min-width: 721px) and (max-width: 1440px) and (orientation: landscape), (min-width: 721px) and (orientation: landscape) and (pointer: coarse) {
+  .app-shell .home-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+/* Widget labels beside their icon never run past the card (6 columns on tablets make them narrower). */
+.app-shell .widget-card__label { right: calc(var(--u)*1.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: .08em; }
+/* Settings: a reminder that this device has its own layout or background. */
+.app-shell .st-device-note { display: flex; align-items: center; gap: calc(var(--u)*1); margin: calc(var(--u)*1.6) 0 0; padding: calc(var(--u)*1.2) calc(var(--u)*1.6); border-radius: calc(var(--u)*1.6*var(--hd-r,1)); background: color-mix(in srgb, var(--on) 16%, transparent); color: var(--ink); font: 500 calc(var(--u)*1.7)/1.35 var(--f-body); }
+.app-shell .st-device-note svg { flex: none; color: var(--on); }
+.app-shell .st-device-note--panel { margin: 0 0 calc(var(--u)*1.6); }
+/* Pictures in dropdowns (layout and background choices): a small rounded frame left of the label. */
+.hdx-thumb { position: relative; flex: none; width: 52px; height: 32px; border-radius: 7px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.18); }
+.hdx-thumb > .lp-thumb { position: absolute; left: 0; top: 0; transform: scale(.40625); transform-origin: 0 0; }
+.hdx-thumb > .st-kids-scene, .hdx-thumb > .hdx-thumb__fill { position: absolute; inset: 0; display: block; width: 100%; height: 100%; border: 0; border-radius: 0; }
+.hdx-select > span.hdx-thumb { flex: none; width: 40px; height: 25px; border-radius: 6px; }
+/* Phones: the closed button keeps its width for the name; the pictures show in the list. */
+@media (max-width: 720px) { .hdx-select > span.hdx-thumb { display: none; } }
+.hdx-select > .hdx-thumb > .lp-thumb { transform: scale(.3125); }
+.hdx-select__option { justify-content: flex-start; }
+.hdx-select__option > span:not(.hdx-thumb) { flex: 1; min-width: 0; }
+
+/* Screensaver: room temperatures under the weather, and the large size for reading from across the room. */
+.app-shell .hd-saver__rooms { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px min(3.4vw, 34px); max-width: min(92vw, 900px); font: 500 min(3vw, 24px)/1.2 var(--f-body); }
+.app-shell .hd-saver__rooms > span { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.app-shell .hd-saver__rooms > span > span { max-width: 14em; overflow: hidden; text-overflow: ellipsis; opacity: .8; }
+.app-shell .hd-saver__rooms svg { opacity: .8; }
+.app-shell .hd-saver__rooms b { font-weight: 650; font-variant-numeric: tabular-nums; }
+/* Large: the clock stays, the weather and temperatures become big numbers with their names under them. */
+.app-shell .hd-saver--large .hd-saver__date { font-size: min(3.6vw, 32px); }
+.app-shell .hd-saver__stats { display: flex; flex-wrap: wrap; justify-content: center; gap: min(2.4vh, 20px) 0; max-width: min(94vw, 1100px); margin-top: min(2vh, 14px); }
+.app-shell .hd-saver__stat { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; padding: 0 min(3.4vw, 40px); }
+.app-shell .hd-saver__stat + .hd-saver__stat { box-shadow: inset 1px 0 0 rgba(255,255,255,.2); }
+.app-shell .hd-saver__stat b { font: 300 min(8vw, 10vh, 84px)/.95 var(--f-display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.app-shell .hd-saver__stat span { display: inline-flex; align-items: center; gap: 6px; max-width: 12em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 min(1.9vw, 16px)/1.2 var(--f-body); letter-spacing: .12em; text-transform: uppercase; opacity: .72; }
+.app-shell .hd-saver__stats--many .hd-saver__stat { flex: 0 0 25%; padding: 0 12px; }
+.app-shell .hd-saver__stats--many .hd-saver__stat:nth-child(4n + 1) { box-shadow: none; }
+.app-shell .hd-saver__stats--many .hd-saver__stat b { font-size: min(6.4vw, 8vh, 68px); }
+.app-shell .hd-saver--large:has(.hd-saver__stats--many) .hd-saver__time { font-size: min(24vw, 32vh, 220px); }
+.app-shell .hd-saver--large:has(.hd-saver__agenda) .hd-saver__time { font-size: min(20vw, 26vh, 200px); }
+.app-shell .hd-saver--large:has(.hd-saver__agenda) .hd-saver__stat b { font-size: min(5vw, 6.5vh, 54px); }
+
+/* Child lock: the header lock fills a ring while held, the note under the header, and a lock on the locked cards. */
+.app-shell .hd-child-lock { position: relative; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.app-shell .hd-child-lock--on { background: #f4edd9; color: #1b1712; }
+.app-shell .hd-child-lock__ring { position: absolute; inset: -3px; width: calc(100% + 6px); height: calc(100% + 6px); transform: rotate(-90deg); pointer-events: none; }
+.app-shell .hd-child-lock__ring circle { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; }
+.app-shell .hd-child-lock--holding .hd-child-lock__ring circle { opacity: .9; stroke-dashoffset: 0; transition: stroke-dashoffset 3s linear; }
+.app-shell .hd-lock-note { position: fixed; z-index: 60; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: var(--hd-pill, 99px); background: rgba(20,18,16,.88); color: #fff; font: 600 14px/1.3 var(--f-body); box-shadow: 0 8px 28px rgba(0,0,0,.35); backdrop-filter: blur(10px); animation: hd-lock-note .25s ease; pointer-events: none; }
+@keyframes hd-lock-note { from { opacity: 0; transform: translate(-50%, -8px); } }
+.app-shell .device-tile__lock { position: absolute; z-index: 2; right: calc(var(--u)*1.2); top: calc(var(--u)*1.2); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.45); color: #fff; pointer-events: none; }
+.app-shell .device-tile:has(.device-tile__lock) > :not(.device-tile__lock) { opacity: .55; }
+
+/* Cover option "Buttons on the side": on a small tile the three buttons stack on the right, so the tile is as tall as the others. */
+.app-shell .device-tile:has(> .device-controls--side) { padding-right: calc(var(--u)*1.4 + 48px); }
+.app-shell .device-tile > .device-controls.device-controls--side { position: absolute; z-index: 1; top: calc(var(--u)*1.2); right: calc(var(--u)*1.2); bottom: calc(var(--u)*1.2); width: 42px; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.app-shell .device-tile > .device-controls.device-controls--side button { flex: 1 1 0; width: 100%; min-width: 0; min-height: 0; }
+
+/* Device picker: search and kinds stay on top while the list scrolls; on wider screens a big sheet with the
+   devices in columns, each with its state and entity id, and the room name pinned while its devices scroll by. */
+.app-shell .hd-sheet.hd-picker { overflow: hidden; }
+.app-shell .hd-picker .hd-picker__list { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; margin: 0 calc(var(--u)*-1); padding: 0 calc(var(--u)*1) calc(var(--u)*1); gap: calc(var(--u)*1.6); }
+.app-shell .hd-picker__kinds { display: flex; gap: calc(var(--u)*.8); overflow-x: auto; scrollbar-width: none; margin: calc(var(--u)*-1) calc(var(--u)*-3) 0; padding: 2px calc(var(--u)*3); }
+.app-shell .hd-picker__kinds::-webkit-scrollbar { display: none; }
+.app-shell .hd-picker__kinds button { flex: none; display: inline-flex; align-items: center; gap: calc(var(--u)*.7); height: calc(var(--u)*4.2); padding: 0 calc(var(--u)*1.6); border: 0; border-radius: var(--hd-pill, 99px); background: rgba(255,255,255,.1); color: var(--ink); font: 600 calc(var(--u)*1.6)/1 var(--f-body); white-space: nowrap; cursor: pointer; }
+.app-shell .hd-picker__kinds button i { font-style: normal; font-weight: 500; opacity: .6; font-variant-numeric: tabular-nums; }
+.app-shell .hd-picker__kinds button[aria-pressed="true"] { background: var(--on); color: var(--on-ink, #2a2110); }
+.app-shell .hd-picker__kinds button[aria-pressed="true"] i { opacity: .75; }
+.app-shell .hd-picker__room { position: sticky; top: 0; z-index: 1; margin: 0 calc(var(--u)*-1); padding: calc(var(--u)*.8) calc(var(--u)*2.2); background: rgba(30,26,24,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.app-shell .hd-picker__rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--u)*.4); }
+.app-shell .hd-picker__copy small, .app-shell .hd-picker__copy code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .hd-picker__copy code { color: var(--ink-3); font: 500 calc(var(--u)*1.3)/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; opacity: .8; }
+.app-shell .hd-picker__copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 760px) {
+  .app-shell .hd-sheet.hd-picker { width: min(1120px, calc(100vw - 64px)); height: min(860px, calc(100vh - 64px)); max-height: none; }
+  .app-shell .hd-picker__rows { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: calc(var(--u)*.6) calc(var(--u)*1); }
+  .app-shell .hd-picker__row { background: rgba(255,255,255,.04); }
+}
+@media (max-width: 759px) { .app-shell .hd-sheet.hd-picker { height: calc(100dvh - 40px); max-height: none; } }
+
+/* Long dropdowns: a search field pinned on top, and the entity id under each sensor's name. */
+.hdx-select__search { position: sticky; top: -6px; z-index: 1; display: flex; align-items: center; gap: 8px; margin: -6px -6px 6px; padding: 10px 14px; background: rgba(255,255,255,.94); border-bottom: 1px solid rgba(0,0,0,.08); color: rgba(29,26,23,.55); }
+.hdx-select__list--sheet .hdx-select__search { top: -10px; margin: 0 -12px 6px; padding: 10px 20px; }
+.hdx-select__search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: #1d1a17; font: inherit; }
+.hdx-select__two { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.hdx-select__two > span, .hdx-select__two > small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdx-select__two > small { font: 500 11.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; color: rgba(29,26,23,.5); }
+.hdx-select__none { padding: 12px; text-align: center; color: rgba(29,26,23,.5); }
+.app-shell.view-kids .hdx-select__search { background: #fffdf8; }
+.app-shell.view-kids .hd-picker__room { background: var(--kid-sheet, #fffdf8); }
 `;

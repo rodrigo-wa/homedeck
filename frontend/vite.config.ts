@@ -9,7 +9,7 @@ function fontLicenses(): Plugin {
   return {
     name: "homedeck-font-licenses",
     generateBundle() {
-      for (const font of ["outfit", "figtree"]) {
+      for (const font of ["outfit", "figtree", "fredoka"]) {
         this.emitFile({
           type: "asset",
           fileName: `fonts/${font}-LICENSE.txt`,

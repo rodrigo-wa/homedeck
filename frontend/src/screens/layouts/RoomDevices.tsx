@@ -30,6 +30,7 @@ export function RoomDevices({ className, props, render, room, sizable = false }:
   return <>
     {editing && <RoomOptions allRooms={allRooms} compact={sizable ? compactSensors(layout, visible, (next) => onLayout(screen, next)) : undefined} hass={hass} room={room} t={t} />}
     <EditableGrid
+      roomScreen={screen}
       hass={hass}
       addLabel={t("addDevices")}
       className={className}

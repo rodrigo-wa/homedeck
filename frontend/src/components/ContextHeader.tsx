@@ -11,6 +11,7 @@ import { numeric, useWeather, type WeatherForecast, type WeatherNow } from "../w
 import { openSidebar, sidebarHidden } from "../sidebar";
 import { AgendaButtons } from "./Agenda";
 import { HDIcon, type IconName } from "./HDIcon";
+import { childLocked, childLockEnabled, childLockNote, setChildLocked, useDevicePref } from "../devicePrefs";
 
 interface ContextHeaderProps {
   config: HomeDeckConfig;
@@ -82,6 +83,7 @@ export function ContextHeader({ config, hass, language, onSettings, part = "all"
           )}
           {config.home.show_presence && people.length > 0 && <div className="presence-stack" aria-label={`${presentPeople.length} ${t("peopleHome")}`}>{people.slice(0, 4).map((person, index) => <span className={person.state === "home" ? "presence-avatar presence-avatar--home" : "presence-avatar"} key={person.entity_id} style={{ "--avatar": AVATAR_COLORS[index % AVATAR_COLORS.length] } as CSSProperties} title={`${person.attributes.friendly_name ?? person.entity_id}: ${person.state}`}>{person.attributes.entity_picture ? <img alt="" src={person.attributes.entity_picture} /> : initials(String(person.attributes.friendly_name ?? person.entity_id.split(".")[1]))}</span>)}</div>}
           {sidebarHidden(hass) && <button aria-label={t("openMenu")} className="round-action" onClick={(event) => openSidebar(event.currentTarget)} type="button"><HDIcon name="menu" size={19} /></button>}
+          <ChildLockButton t={t} />
           <button aria-label={t("settings")} className="round-action" onClick={onSettings} type="button"><HDIcon name="settings" size={19} /></button>
         </div>}
       </header>
@@ -172,4 +174,46 @@ function ForecastBody({ condition, conditionLabel, daily, hourly, language, sunr
     </> : <p className="weather-modal__empty">{t("forecastUnavailable")}</p>}
     {weather && <p className="hd-forecast__source">{t("source")}: {weather.source}</p>}
   </>;
+}
+
+const HOLD_MS = 3000;
+
+/** The child lock, when this device uses it: held for 3 s it locks or unlocks; a short tap says to hold it. */
+function ChildLockButton({ t }: { t: (key: TranslationKey) => string }) {
+  const enabled = useDevicePref(childLockEnabled);
+  const locked = useDevicePref(childLocked);
+  const [holding, setHolding] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  if (!enabled) return null;
+  const start = () => {
+    window.clearTimeout(timer.current);
+    setHolding(true);
+    timer.current = window.setTimeout(() => {
+      timer.current = undefined;
+      setHolding(false);
+      setChildLocked(!locked);
+      navigator.vibrate?.(40);
+    }, HOLD_MS);
+  };
+  const stop = () => {
+    if (timer.current === undefined) return;
+    window.clearTimeout(timer.current);
+    timer.current = undefined;
+    setHolding(false);
+    childLockNote("hold");
+  };
+  return <button
+    aria-label={locked ? t("childLockUnlock") : t("childLockLock")}
+    aria-pressed={locked}
+    className={`round-action hd-child-lock${locked ? " hd-child-lock--on" : ""}${holding ? " hd-child-lock--holding" : ""}`}
+    onContextMenu={(event) => event.preventDefault()}
+    onPointerCancel={stop}
+    onPointerDown={(event) => { try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* keeps working without capture */ } start(); }}
+    onPointerUp={stop}
+    type="button"
+  >
+    <HDIcon name={locked ? "lock" : "unlock"} size={19} />
+    <svg aria-hidden="true" className="hd-child-lock__ring" viewBox="0 0 40 40"><circle cx="20" cy="20" pathLength="100" r="18" /></svg>
+  </button>;
 }

@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 const LOCK_KEY = "homedeck-lock-editing";
 const SPEAKER_KEY = "homedeck-spotify-speaker";
 const AWAKE_KEY = "homedeck-keep-awake";
+const VIEW_KEY = "homedeck-device-view";
+const BACKGROUND_KEY = "homedeck-device-background";
+const KIDS_KEY = "homedeck-device-kids";
 const PREF_EVENT = "homedeck-device-pref";
 
 function read(key: string): string | null {
@@ -25,6 +28,42 @@ export const spotifySpeaker = () => read(SPEAKER_KEY) ?? "";
 export const keepAwakeMode = (): "auto" | "on" | "off" => { const value = read(AWAKE_KEY); return value === "on" || value === "off" ? value : "auto"; };
 export const setKeepAwakeMode = (mode: "auto" | "on" | "off") => write(AWAKE_KEY, mode === "auto" ? null : mode);
 export const setSpotifySpeaker = (speaker: string) => write(SPEAKER_KEY, speaker || null);
+
+/** This device's own layout, background and Kids scene; empty means it follows the panel's (Settings → Layout
+ * and Appearance). A wall tablet in the kids' room can use the Kids layout while the living room keeps the grid. */
+export const deviceViewMode = () => read(VIEW_KEY) ?? "";
+export const setDeviceViewMode = (mode: string) => write(VIEW_KEY, mode || null);
+export const deviceBackground = () => read(BACKGROUND_KEY) ?? "";
+export const setDeviceBackground = (preset: string) => write(BACKGROUND_KEY, preset || null);
+export const deviceKidsScene = () => read(KIDS_KEY) ?? "";
+export const setDeviceKidsScene = (scene: string) => write(KIDS_KEY, scene || null);
+
+/** Child lock on this device: the lock in the header, held 3 s to lock or unlock. While locked, the cards
+ * marked "Lock with the child lock" do nothing. Off by default, and nothing is locked until a card is marked. */
+const CHILD_KEY = "homedeck-child-lock";
+const CHILD_ON_KEY = "homedeck-child-locked";
+const NOTE_EVENT = "homedeck-child-note";
+export const childLockEnabled = () => read(CHILD_KEY) === "1";
+export const childLocked = () => childLockEnabled() && read(CHILD_ON_KEY) === "1";
+export const setChildLocked = (locked: boolean) => write(CHILD_ON_KEY, locked ? "1" : null);
+export const setChildLockEnabled = (on: boolean) => { if (!on) write(CHILD_ON_KEY, null); write(CHILD_KEY, on ? "1" : null); };
+/** A short note under the header: a locked card was tapped, or the lock was tapped instead of held. */
+export type ChildLockNote = "blocked" | "hold";
+export const childLockNote = (note: ChildLockNote) => window.dispatchEvent(new CustomEvent<ChildLockNote>(NOTE_EVENT, { detail: note }));
+export function useChildLockNote(): ChildLockNote | null {
+  const [note, setNote] = useState<{ kind: ChildLockNote; at: number } | null>(null);
+  useEffect(() => {
+    const show = (event: Event) => setNote({ kind: (event as CustomEvent<ChildLockNote>).detail, at: Date.now() });
+    window.addEventListener(NOTE_EVENT, show);
+    return () => window.removeEventListener(NOTE_EVENT, show);
+  }, []);
+  useEffect(() => {
+    if (!note) return;
+    const timer = window.setTimeout(() => setNote(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [note]);
+  return note?.kind ?? null;
+}
 
 /** Re-renders when a device choice changes (in Settings, or in another tab of the same browser). */
 export function useDevicePref<T>(get: () => T): T {

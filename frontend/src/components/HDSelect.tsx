@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { HDIcon } from "./HDIcon";
 
 export interface HDSelectOption {
   label: string;
   value: string;
+  /** A small picture beside the label (a layout or background preview), in the list and on the button. */
+  thumb?: ReactNode;
 }
 
 interface HDSelectProps {
@@ -20,6 +22,9 @@ interface HDSelectProps {
 interface Placement { top: number; left: number; width: number; maxHeight: number; up: boolean }
 
 const PHONE = "(max-width: 720px)";
+/** Lists longer than this get a search field on top (sensors chosen among hundreds). */
+const SEARCH_FROM = 10;
+const ENTITY_ID = /^[a-z_]+\.[a-z0-9_]+$/;
 
 /**
  * Select with a floating list rendered at the panel root, so glass cards never clip it.
@@ -37,6 +42,11 @@ export function HDSelect({ ariaLabel, className = "", disabled = false, onChange
   const listId = useId();
   const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
   const selected = options[selectedIndex];
+  const searchable = options.length > SEARCH_FROM;
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLocaleLowerCase();
+  // Indexes of the options the search leaves; every option without a search.
+  const shown = options.map((_, index) => index).filter((index) => !needle || `${options[index].label} ${options[index].value}`.toLocaleLowerCase().includes(needle));
 
   const portalTarget = (): Element | null => {
     const root = buttonRef.current?.getRootNode();
@@ -50,7 +60,7 @@ export function HDSelect({ ariaLabel, className = "", disabled = false, onChange
     const below = window.innerHeight - rect.bottom - 12;
     const above = rect.top - 12;
     const up = below < Math.min(260, options.length * 48 + 12) && above > below;
-    const width = Math.max(rect.width, 220);
+    const width = Math.min(window.innerWidth - 16, Math.max(rect.width, options.length > SEARCH_FROM ? 320 : 220));
     setPlace({
       top: up ? rect.top - 6 : rect.bottom + 6,
       left: Math.min(Math.max(8, rect.left), window.innerWidth - width - 8),
@@ -66,6 +76,7 @@ export function HDSelect({ ariaLabel, className = "", disabled = false, onChange
     // A half-hidden trigger would leave the floating list nowhere to anchor.
     if (!phone) buttonRef.current?.scrollIntoView({ block: "nearest" });
     setSheet(phone);
+    setQuery("");
     setActive(selectedIndex);
     measure();
     setOpen(true);
@@ -110,6 +121,15 @@ export function HDSelect({ ariaLabel, className = "", disabled = false, onChange
     listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: "nearest" });
   }, [open, active]);
 
+  // In the search field: arrows move through what the search left, Enter picks.
+  const searchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    const at = shown.indexOf(active);
+    if (event.key === "ArrowDown") { event.preventDefault(); setActive(shown[Math.min(shown.length - 1, at + 1)] ?? active); }
+    else if (event.key === "ArrowUp") { event.preventDefault(); setActive(shown[Math.max(0, at - 1)] ?? active); }
+    else if (event.key === "Enter") { event.preventDefault(); if (shown.includes(active)) choose(active); else if (shown.length > 0) choose(shown[0]); }
+    else if (event.key === "Tab") close(false);
+  };
+
   const keyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     const last = options.length - 1;
     if (!open) {
@@ -140,7 +160,9 @@ export function HDSelect({ ariaLabel, className = "", disabled = false, onChange
     style={sheet || !place ? undefined : { top: place.top, left: place.left, width: place.width, maxHeight: place.maxHeight }}
   >
     {sheet && <div className="hdx-select__sheet-title">{ariaLabel}</div>}
-    {options.map((option, index) => <div
+    {searchable && <label className="hdx-select__search"><HDIcon name="search" size={16} /><input aria-label={ariaLabel} autoFocus={!sheet} onChange={(event) => { setQuery(event.target.value); const needleNow = event.target.value.trim().toLocaleLowerCase(); const first = options.findIndex((option) => !needleNow || `${option.label} ${option.value}`.toLocaleLowerCase().includes(needleNow)); if (first >= 0) setActive(first); }} onKeyDown={searchKeyDown} type="search" value={query} /></label>}
+    {searchable && shown.length === 0 && <div className="hdx-select__none">—</div>}
+    {shown.map((index) => options[index]).map((option, at) => { const index = shown[at]; return <div
       aria-selected={option.value === value}
       className={`hdx-select__option ${index === active ? "hdx-select__option--active" : ""}`}
       data-index={index}
@@ -150,8 +172,8 @@ export function HDSelect({ ariaLabel, className = "", disabled = false, onChange
       onPointerMove={() => setActive(index)}
       role="option"
     >
-      <span>{option.label}</span>{option.value === value && <HDIcon name="check" size={16} />}
-    </div>)}
+      {option.thumb && <span aria-hidden="true" className="hdx-thumb">{option.thumb}</span>}{searchable && ENTITY_ID.test(option.value) ? <span className="hdx-select__two"><span>{option.label}</span><small>{option.value}</small></span> : <span>{option.label}</span>}{option.value === value && <HDIcon name="check" size={16} />}
+    </div>; })}
   </div>;
 
   const target = open ? portalTarget() : null;
@@ -168,7 +190,7 @@ export function HDSelect({ ariaLabel, className = "", disabled = false, onChange
       ref={buttonRef}
       type="button"
     >
-      <span>{selected?.label ?? "—"}</span><HDIcon name="chevron" size={16} />
+      {selected?.thumb && <span aria-hidden="true" className="hdx-thumb">{selected.thumb}</span>}<span>{selected?.label ?? "—"}</span><HDIcon name="chevron" size={16} />
     </button>
     {target && createPortal(sheet ? <div className="hdx-select__backdrop" onPointerDown={(event) => { if (event.target === event.currentTarget) close(); }}>{list}</div> : list, target)}
   </>;

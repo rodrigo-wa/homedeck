@@ -8,6 +8,8 @@ import { PlayersContext } from "../spotify";
 import { CameraWholeContext, LiveCamerasContext } from "./CameraCard";
 import { OccasionContext, SeasonLayer } from "./SeasonLayer";
 import { SeasonDecor } from "./SeasonDecor";
+import { KidsScene } from "./KidsScene";
+import { HassContext } from "./HDIcon";
 import type { Occasion } from "../seasons";
 
 type Palette = [string, string, string, string];
@@ -202,6 +204,9 @@ function activityLevel(config: HomeDeckConfig, data: DiscoveryResponse, hass: Ho
 
 export function DynamicShell({ children, config, data, hass, mode = "grid", season }: { children: ReactNode; config: HomeDeckConfig; data: DiscoveryResponse; hass: HomeAssistant; mode?: string; season?: { occasion: Occasion | null; fireworks: boolean } }) {
   const viewportUnit = useStableViewport();
+  // The Kids layout draws its own animated scene instead of the regular background.
+  const kids = mode === "kids";
+  const kidsScene = config.kids_background ?? "sky";
   const level = activityLevel(config, data, hass);
   const highlight = /^#[0-9a-f]{6}$/i.test(config.highlight_color ?? "") ? config.highlight_color : "#ffc94d";
   const palette = FIXED[config.background.preset] ?? paletteAt(ADAPTIVE[config.background.preset] ?? ADAPTIVE.adaptive_ember, level);
@@ -220,11 +225,12 @@ export function DynamicShell({ children, config, data, hass, mode = "grid", seas
     ...(viewportUnit ? { "--hd-vh": viewportUnit } : {}),
   } as CSSProperties;
   return (
-    <div className={`app-shell theme-${config.theme} view-${mode} ${config.background.animated ? "ambient-animated" : "ambient-still"} ${config.cards?.animations ? "hd-anim" : ""}`} data-activity={level.toFixed(2)} style={style}>
+    <div className={`app-shell theme-${config.theme} view-${mode} ${kids ? `kids-scene--${kidsScene}` : ""} ${config.background.animated ? "ambient-animated" : "ambient-still"} ${config.cards?.animations ? "hd-anim" : ""}`} data-activity={level.toFixed(2)} style={style}>
       <div aria-hidden="true" className="ambient-background"><i /><i /><i /></div>
+      {kids && <KidsScene scene={kidsScene} />}
       {season && (season.occasion?.effect || season.fireworks) && <SeasonLayer effect={season.occasion?.effect ?? null} fireworks={season.fireworks} intensity={season.occasion?.phase === "lead" ? 0.45 : 1} />}
       {season?.occasion && (season.occasion.phase === "day" || season.occasion.id === "christmas") && <SeasonDecor id={season.occasion.id} />}
-      <OccasionContext.Provider value={season?.occasion ?? null}><SparklinesContext.Provider value={Boolean(config.cards?.sparklines)}><SensorSinceContext.Provider value={Boolean(config.cards?.sensor_since)}><LiveCamerasContext.Provider value={config.live_cameras !== false}><PlayersContext.Provider value={config.cards?.players !== false}><CameraWholeContext.Provider value={Boolean(config.camera_whole)}>{children}</CameraWholeContext.Provider></PlayersContext.Provider></LiveCamerasContext.Provider></SensorSinceContext.Provider></SparklinesContext.Provider></OccasionContext.Provider>
+      <HassContext.Provider value={hass}><OccasionContext.Provider value={season?.occasion ?? null}><SparklinesContext.Provider value={Boolean(config.cards?.sparklines)}><SensorSinceContext.Provider value={Boolean(config.cards?.sensor_since)}><LiveCamerasContext.Provider value={config.live_cameras !== false}><PlayersContext.Provider value={config.cards?.players !== false}><CameraWholeContext.Provider value={Boolean(config.camera_whole)}>{children}</CameraWholeContext.Provider></PlayersContext.Provider></LiveCamerasContext.Provider></SensorSinceContext.Provider></SparklinesContext.Provider></OccasionContext.Provider></HassContext.Provider>
     </div>
   );
 }

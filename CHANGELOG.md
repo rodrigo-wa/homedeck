@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.16.7
+
+- Kids layout (Pro): in Settings → Layout, a playful children's game look with rounded type, colorful chunky cards with a solid edge, bouncy animations (cards hop in, squish when tapped, icons wiggle while on and sparkle when turned on) and six exclusive animated scenes in Settings → Appearance: Sky, Ocean, Space, Candy, Enchanted (pink, with a castle, butterflies and sparkles) and Road (blue, with hills and little cars), also offered in the first setup when the Kids layout is picked. The motion stops in Edit mode and for reduced motion.
+- Covers: closed now counts as on (lit card, active count and details) and open as off; covers set to "Reverse open and closed" are reversed here too.
+- Device picker (Add devices and others): bigger on tablets and computers, with the devices in columns; filters by type with counts (Lights, Switches, Covers, Sensors...) and "Selected" to review what is ticked; each row shows the current state and the entity id; the room name stays pinned while scrolling, and the search and filters stay on screen.
+- Long dropdowns (energy sensors, waste collection, screensaver, doorbell...): a search field on top, and each sensor shows its entity id under the name.
+- Covers: new "Buttons on the side" option in Card options; on the small tile the up, stop and down buttons stack on the right, so the tile is as tall as the others.
+- Name in this room only: when you rename a device in Card options inside a room, "Only in this room" gives it a name used only there, and it keeps its usual name everywhere else.
+- Child lock: in Settings → This device, a lock in the header that locks or unlocks when held for 3 seconds. While locked, the cards marked "Lock with the child lock" (in Card options) do nothing and show a lock, and Settings and Edit stay closed. Nothing is locked by default.
+- Sidebar layout on phones: the room title no longer sits at a different height in rooms with few cards.
+- Screensaver (Pro): up to six temperature sensors under the clock, each with its room name, and a Normal or Large text size; Large shows the weather and temperatures as big numbers with their names below, to read from across the room.
+- Scene strip: now takes scripts too. In Edit mode, "Add scenes or scripts" puts a script next to your scenes and it runs with one tap (no script is added on its own).
+- Door, window, motion and other binary sensors show Home Assistant's own wording (Open/Closed, Detected/Clear...) instead of on/off.
+- Home Assistant icons: with "Home Assistant icons" on (or chosen on a card), a card shows exactly the icon HA shows, worked out from its device class and state (blinds, doors, a switch on or off), not only icons set by hand.
+- Covers: new "Reverse up and down" option for motors wired the other way round.
+- Kids layout: the sparkles when something turns on open from behind the icon, without crossing its outline.
+- Layout and background per device (Settings → This device): each tablet can have its own layout, background and Kids scene (Kids in the kids' room, Grid in the living room). "Same as the panel" follows the shared one, as before.
+- Kids layout: while a command is on its way the card's own border pulses, instead of a second line inside it that looked like a doubled outline.
+- Back to Home after 1 minute without a touch, in every layout. Not on the screensaver, in Edit mode or Settings, on the cameras screen or camera pages, while a camera or the player is open, or while the doorbell rings.
+- Tablets lying down (Echo Show, iPad, Fire and big touch screens) always show 6 columns on Home; phones 2, while tablets standing up and computers still fit their width.
+
 ## 0.16.6
 
 - Security item: in the details of a door, window or motion sensor, or a lock, turn off "Security item" to leave it out of the Security card, its alerts and the Security screen. It still shows in its room.

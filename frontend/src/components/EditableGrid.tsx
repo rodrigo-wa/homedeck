@@ -36,6 +36,8 @@ export interface GridItem {
 
 interface EditableGridProps {
   addLabel?: string;
+  /** The room screen ("room:…") the grid shows, so a device can be renamed for this room only. */
+  roomScreen?: string;
   className: string;
   editing: boolean;
   /** Lets a tap on a device, in Edit mode, open its name, icon and options. */
@@ -82,7 +84,7 @@ function stretchedRow(root: HTMLElement | null): string | null {
   return /^\d+(\.\d+)?px$/.test(first) ? first : null;
 }
 
-export function EditableGrid({ addLabel, cameraGrid, className, editing, hass, hiddenItems = [], items: allCards, layout, onAdd, onLayout, onRemove, sections = false, sizable = true, t, trayDevices = false }: EditableGridProps) {
+export function EditableGrid({ addLabel, roomScreen, cameraGrid, className, editing, hass, hiddenItems = [], items: allCards, layout, onAdd, onLayout, onRemove, sections = false, sizable = true, t, trayDevices = false }: EditableGridProps) {
   // A hidden device simply leaves the screen and goes back to the "add" list; rooms and widgets stay in the tray.
   const tray = hiddenItems.filter((item) => trayDevices || !item.key.startsWith("entity:"));
   const rootRef = useRef<HTMLDivElement>(null);
@@ -358,7 +360,7 @@ export function EditableGrid({ addLabel, cameraGrid, className, editing, hass, h
           </div>}
         </Fragment>)}
       </div>}
-    {editingEntity && hass && rootRef.current?.closest(".app-shell") && createPortal(<EntityEditSheet entityId={editingEntity} hass={hass} linkable={sizable && layout.wide.includes(`entity:${editingEntity}`)} onClose={() => setEditingEntity(null)} t={t} />, rootRef.current.closest(".app-shell")!)}
+    {editingEntity && hass && rootRef.current?.closest(".app-shell") && createPortal(<EntityEditSheet entityId={editingEntity} hass={hass} roomScreen={roomScreen} linkable={sizable && layout.wide.includes(`entity:${editingEntity}`)} onClose={() => setEditingEntity(null)} t={t} />, rootRef.current.closest(".app-shell")!)}
     {editingRoom && rootRef.current?.closest(".app-shell") && hass && createPortal(<RoomCardSheet hass={hass} linkable={layout.wide.includes(`room:${editingRoom}`)} onClose={() => setEditingRoom(null)} roomId={editingRoom} t={t} />, rootRef.current.closest(".app-shell")!)}
     {editing && tray.length > 0 && <section className="hd-hidden-tray" aria-label={t("hiddenItems")}>
       <span className="eyebrow">{t("hiddenItems")}</span>

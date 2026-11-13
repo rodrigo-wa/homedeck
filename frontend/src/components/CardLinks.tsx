@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { TranslationKey } from "../i18n";
-import { RUNNABLE, SELECTS, runEntity, selectOption, selectOptions } from "../devices";
+import { RUNNABLE, SELECTS, runEntity, selectOption, selectOptions, coverMove } from "../devices";
 import { useCustomize } from "../personalize";
 import { usePlan } from "../plan";
 import type { DiscoveredEntity } from "../types/discovery";
@@ -41,9 +41,9 @@ function LinkedDevice({ entity, hass, label, language, t }: { entity: Discovered
 
   if (domain === "cover") {
     return <div className="hd-link">{name}<span className="hd-link__buttons">
-      <button aria-label={`${t("openCover")}: ${label}`} disabled={off} onClick={() => guarded(() => call("open_cover"))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={16} /></span></button>
+      <button aria-label={`${t("openCover")}: ${label}`} disabled={off} onClick={() => guarded(() => call(coverMove(entity, "up")))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={16} /></span></button>
       <button aria-label={`${t("stopCover")}: ${label}`} disabled={off} onClick={() => guarded(() => call("stop_cover"))} type="button"><HDIcon name="stop" size={13} /></button>
-      <button aria-label={`${t("closeCover")}: ${label}`} disabled={off} onClick={() => guarded(() => call("close_cover"))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={16} /></span></button>
+      <button aria-label={`${t("closeCover")}: ${label}`} disabled={off} onClick={() => guarded(() => call(coverMove(entity, "down")))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={16} /></span></button>
     </span></div>;
   }
   if (SWITCHES.has(domain)) {

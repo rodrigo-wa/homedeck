@@ -18,7 +18,7 @@ import { isNumericState } from "../history";
 import { HistoryChart } from "./HistoryChart";
 import { MAX_NAME, useCustomize } from "../personalize";
 import { isSecurityKind } from "../security";
-import { friendlyDate, ALARM_ARMED, alarmCall, alarmCodeFormat, alarmModes, alarmStatus, cameraIsWebRtcOnly, cameraSnapshot, cameraStream, loadCameraPlayer, mediaArt, mediaSources, plantReadings, plantStatus, RUNNABLE, SELECTS, runEntity, selectOption, selectOptions, vacuumActions, vacuumStatus } from "../devices";
+import { binarySensorText, coverMove, coverOn, friendlyDate, ALARM_ARMED, alarmCall, alarmCodeFormat, alarmModes, alarmStatus, cameraIsWebRtcOnly, cameraSnapshot, cameraStream, loadCameraPlayer, mediaArt, mediaSources, plantReadings, plantStatus, RUNNABLE, SELECTS, runEntity, selectOption, selectOptions, vacuumActions, vacuumStatus } from "../devices";
 
 interface EntityModalProps {
   entity: DiscoveredEntity;
@@ -88,7 +88,7 @@ function EntityDetails({ entity, hass, language, onClose, roomName, t }: EntityM
   const call = (domain: string, service: string, data: Record<string, unknown> = {}) => runOnce(() => hass.callService(domain, service, { entity_id: entity.entity_id, ...data }));
 
   const domain = entity.domain;
-  const on = Boolean(state && ACTIVE.has(state.state));
+  const on = Boolean(state && (domain === "cover" ? coverOn(entity, state.state) : ACTIVE.has(state.state)));
   const colorModes = Array.isArray(attrs.supported_color_modes) ? attrs.supported_color_modes.map(String) : [];
   const dimmable = typeof attrs.brightness === "number" || colorModes.some((mode) => mode !== "onoff");
   const colorful = colorModes.some((mode) => ["hs", "xy", "rgb", "rgbw", "rgbww"].includes(mode));
@@ -109,6 +109,7 @@ function EntityDetails({ entity, hass, language, onClose, roomName, t }: EntityM
     if (domain === "script") return state.state === "on" ? t("scriptRunning") : t("runScript");
     if (domain === "button" || domain === "input_button") return t("pressButton");
     if (SELECTS.has(domain)) return state.state;
+    if (domain === "binary_sensor") { const text = binarySensorText(state, t); if (text) return text; }
     if (state.state === "on") return t("stateOn");
     if (state.state === "off") return t("stateOff");
     return friendlyDate(state, language) ?? `${state.state.replaceAll("_", " ")}${unit}`;
@@ -137,7 +138,7 @@ function EntityDetails({ entity, hass, language, onClose, roomName, t }: EntityM
     <section className={`hd-sheet hd-detail ${domain === "camera" ? "hd-detail--camera" : ""} ${busy ? "hd-detail--busy" : ""}`}>
       <header className="hd-detail__header">
         <span className={on ? "hd-detail__icon hd-detail__icon--on" : "hd-detail__icon"}><EntityIcon entity={customize?.lookup(entity.entity_id) ?? entity} size={24} /></span>
-        <div><span className="eyebrow">{roomName ?? domainLabel(domain, language)}</span><h2 id="hd-detail-title">{(customize?.lookup(entity.entity_id) ?? entity).name}</h2><p>{status}</p></div>
+        <div><span className="eyebrow">{roomName ?? domainLabel(domain, language)}</span><h2 id="hd-detail-title">{(entity.room_screen && customize?.roomName(entity.room_screen, entity.entity_id)) || (customize?.lookup(entity.entity_id) ?? entity).name}</h2><p>{status}</p></div>
         <button aria-label={t("close")} className="hd-close" onClick={onClose} type="button"><HDIcon name="close" size={20} /></button>
       </header>
 
@@ -174,7 +175,7 @@ function EntityDetails({ entity, hass, language, onClose, roomName, t }: EntityM
 
         {domain === "cover" && <>
           {typeof attrs.current_position === "number" && <Slider label={t("setPosition")} onCommit={(value) => void call("cover", "set_cover_position", { position: value })} value={num(attrs.current_position, 0)} />}
-          <div className="hd-segment"><button onClick={() => void call("cover", "open_cover")} type="button">{t("openAction")}</button><button onClick={() => void call("cover", "stop_cover")} type="button">{t("stop")}</button><button onClick={() => void call("cover", "close_cover")} type="button">{t("closeAction")}</button></div>
+          <div className="hd-segment"><button onClick={() => void call("cover", coverMove(customize?.lookup(entity.entity_id) ?? entity, "up"))} type="button">{t("openAction")}</button><button onClick={() => void call("cover", "stop_cover")} type="button">{t("stop")}</button><button onClick={() => void call("cover", coverMove(customize?.lookup(entity.entity_id) ?? entity, "down"))} type="button">{t("closeAction")}</button></div>
         </>}
 
         {domain === "media_player" && <>
@@ -221,7 +222,7 @@ function EntityDetails({ entity, hass, language, onClose, roomName, t }: EntityM
 /** The device's own options, behind a small button: its tile icon (automatic, Home Assistant's, or a
  * HomeDeck icon) and, for what a tap switches, asking for a second tap first. */
 /** Edit mode, a tap on a card: its name, icon and the card's own options. */
-export function EntityEditSheet({ entityId, hass, linkable, onClose, t }: { entityId: string; hass: HomeAssistant; linkable: boolean; onClose: () => void; t: (key: TranslationKey) => string }) {
+export function EntityEditSheet({ entityId, hass, linkable, onClose, roomScreen, t }: { entityId: string; hass: HomeAssistant; linkable: boolean; onClose: () => void; roomScreen?: string; t: (key: TranslationKey) => string }) {
   const customize = useCustomize();
   useEffect(() => {
     const close = (event: globalThis.KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -234,7 +235,7 @@ export function EntityEditSheet({ entityId, hass, linkable, onClose, t }: { enti
     <section className="hd-sheet hd-detail">
       <header className="hd-detail__header">
         <span className="hd-detail__icon"><EntityIcon entity={entity} size={24} /></span>
-        <div><span className="eyebrow">{t("deviceOptions")}</span><EntityName entity={entity} t={t} /><EntitySource entity={entity} t={t} /></div>
+        <div><span className="eyebrow">{t("deviceOptions")}</span><EntityName entity={roomScreen ? { ...entity, room_screen: roomScreen } : entity} t={t} /><EntitySource entity={entity} t={t} /></div>
         <button aria-label={t("close")} className="hd-close" onClick={onClose} type="button"><HDIcon name="close" size={20} /></button>
       </header>
       <DeviceOptions entity={entity} state={hass.states[entityId]} t={t} />
@@ -249,7 +250,8 @@ function DeviceOptions({ entity: opened, state, t }: { entity: DiscoveredEntity;
   const entity = customize.lookup(opened.entity_id) ?? opened;
   const chosen = entity.display_icon ?? "";
   const switches = ["light", "switch", "fan", "input_boolean", "automation", "scene", "cover", ...RUNNABLE].includes(entity.domain);
-  const haIcon = entity.icon?.includes(":") && typeof customElements !== "undefined" && customElements.get("ha-icon") ? entity.icon : null;
+  // Home Assistant's icon can be offered when HA can draw it here (its state icon), or the entity has one set.
+  const haIcon = typeof customElements !== "undefined" && (customElements.get("ha-state-icon") || (entity.icon?.includes(":") && customElements.get("ha-icon"))) ? (entity.icon ?? "ha") : null;
   const pick = (icon: string) => customize.setEntity(entity.entity_id, { icon });
   const modes = Array.isArray(state?.attributes.supported_color_modes) ? state.attributes.supported_color_modes.map(String) : [];
   const colorLight = entity.domain === "light" && modes.some((mode) => ["hs", "xy", "rgb", "rgbw", "rgbww"].includes(mode));
@@ -262,9 +264,10 @@ function DeviceOptions({ entity: opened, state, t }: { entity: DiscoveredEntity;
         {DEVICE_ICONS.map((icon) => <button aria-checked={chosen === icon} aria-label={icon} key={icon} onClick={() => pick(icon)} role="radio" type="button"><HDIcon name={icon} size={18} /></button>)}
       </IconChooser>
     </div>
+    {!["sensor", "binary_sensor", "weather", "person", "calendar", "todo", "event"].includes(entity.domain) && <label className="hd-detail__confirm"><span><b>{t("childLockCard")}</b><small>{t("childLockCardDescription")}</small></span><input checked={Boolean(entity.child_lock)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { child_lock: event.target.checked })} type="checkbox" /></label>}
     {switches && <label className="hd-detail__confirm"><span><b>{t("confirmToggle")}</b><small>{t("confirmToggleDescription")}</small></span><input checked={Boolean(entity.confirm)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { confirm: event.target.checked })} type="checkbox" /></label>}
     {colorLight && <label className="hd-detail__confirm"><span><b>{t("lightAccent")}</b><small>{t("lightAccentDescription")}</small></span><input checked={Boolean(entity.light_accent)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { light_accent: event.target.checked })} type="checkbox" /></label>}
-    {entity.domain === "cover" && ([["cover_no_tap", "coverNoTap", "coverNoTapDescription"], ["cover_invert_position", "coverInvertPosition", "coverInvertPositionDescription"], ["cover_invert_state", "coverInvertState", "coverInvertStateDescription"]] as const).map(([flag, label, description]) => <label className="hd-detail__confirm" key={flag}><span><b>{t(label)}</b><small>{t(description)}</small></span><input checked={Boolean(entity[flag])} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { [flag]: event.target.checked })} type="checkbox" /></label>)}
+    {entity.domain === "cover" && ([["cover_no_tap", "coverNoTap", "coverNoTapDescription"], ["cover_swap_buttons", "coverSwapButtons", "coverSwapButtonsDescription"], ["cover_invert_position", "coverInvertPosition", "coverInvertPositionDescription"], ["cover_invert_state", "coverInvertState", "coverInvertStateDescription"], ["cover_side_buttons", "coverSideButtons", "coverSideButtonsDescription"]] as const).map(([flag, label, description]) => <label className="hd-detail__confirm" key={flag}><span><b>{t(label)}</b><small>{t(description)}</small></span><input checked={Boolean(entity[flag])} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { [flag]: event.target.checked })} type="checkbox" /></label>)}
     {isSecurityKind(entity, state) && <label className="hd-detail__confirm"><span><b>{t("securityItem")}</b><small>{t("securityItemDescription")}</small></span><input checked={!entity.not_security} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { not_security: !event.target.checked })} type="checkbox" /></label>}
   </section>;
 }
@@ -323,16 +326,29 @@ function EntityName({ entity: opened, t }: { entity: DiscoveredEntity; t: (key: 
   const customize = useCustomize();
   const entity = customize?.lookup(opened.entity_id) ?? opened;
   const original = entity.original_name ?? entity.name;
+  // Opened from a room: the name can be given for this room only, while the device keeps its name elsewhere.
+  const screen = opened.room_screen;
+  const here = (screen && customize?.roomName(screen, entity.entity_id)) || "";
+  const shown = here || entity.name;
   const [draft, setDraft] = useState<string | null>(null);
-  if (!customize) return <h2 id="hd-detail-title">{entity.name}</h2>;
+  const [onlyHere, setOnlyHere] = useState(Boolean(here));
+  if (!customize) return <h2 id="hd-detail-title">{shown}</h2>;
   if (draft == null) {
-    return <h2 className="hd-detail__name" id="hd-detail-title"><span>{entity.name}</span><button aria-label={`${t("renameDevice")}: ${entity.name}`} className="hd-detail__rename" onClick={() => setDraft(entity.name)} type="button"><HDIcon name="pencil" size={14} /></button></h2>;
+    return <h2 className="hd-detail__name" id="hd-detail-title"><span>{shown}</span><button aria-label={`${t("renameDevice")}: ${shown}`} className="hd-detail__rename" onClick={() => { setOnlyHere(Boolean(here)); setDraft(shown); }} type="button"><HDIcon name="pencil" size={14} /></button></h2>;
   }
-  const save = () => { customize.rename(entity.entity_id, draft, original); setDraft(null); };
+  const save = () => {
+    if (screen && onlyHere) customize.setRoomName(screen, entity.entity_id, draft.trim() === entity.name ? "" : draft);
+    else {
+      customize.rename(entity.entity_id, draft, original);
+      if (screen && here) customize.setRoomName(screen, entity.entity_id, "");
+    }
+    setDraft(null);
+  };
   return <div className="hd-detail__naming">
-    <input aria-label={t("renameDevice")} autoFocus id="hd-detail-title" onFocus={(event) => event.currentTarget.select()} maxLength={MAX_NAME} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") save(); if (event.key === "Escape") { event.stopPropagation(); setDraft(null); } }} placeholder={original} value={draft} />
+    <input aria-label={t("renameDevice")} autoFocus id="hd-detail-title" onFocus={(event) => event.currentTarget.select()} maxLength={MAX_NAME} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") save(); if (event.key === "Escape") { event.stopPropagation(); setDraft(null); } }} placeholder={onlyHere ? entity.name : original} value={draft} />
     <button aria-label={t("save")} onClick={save} type="button"><HDIcon name="check" size={16} /></button>
-    {entity.original_name && <small>{t("nameInHomeAssistant")}: {original}</small>}
+    {screen && <label className="hd-detail__only-here"><input checked={onlyHere} className="st-switch" onChange={(event) => setOnlyHere(event.target.checked)} type="checkbox" /><span>{t("nameOnlyHere")}</span></label>}
+    {onlyHere ? <small>{t("nameElsewhere")}: {entity.name}</small> : entity.original_name && <small>{t("nameInHomeAssistant")}: {original}</small>}
   </div>;
 }
 

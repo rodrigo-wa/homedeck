@@ -8,10 +8,11 @@ import { useTallTile, useWideTile } from "./EditableGrid";
 import { isNumericState, useHistory, useSensorSince, useSparklines } from "../history";
 import { Sparkline } from "./HistoryChart";
 import { EntityIcon, HDIcon } from "./HDIcon";
+import { childLocked, useDevicePref } from "../devicePrefs";
 import { since, WideControls } from "./WideControls";
 import { CameraCard } from "./CameraCard";
 import { HDSelect } from "./HDSelect";
-import { friendlyDate, ALARM_ARMED, RUNNABLE, SELECTS, alarmStatus, mediaArt, plantStatus, runEntity, selectOption, selectOptions, vacuumActions, vacuumStatus } from "../devices";
+import { binarySensorText, coverMove, coverOn, friendlyDate, ALARM_ARMED, RUNNABLE, SELECTS, alarmStatus, mediaArt, plantStatus, runEntity, selectOption, selectOptions, vacuumActions, vacuumStatus } from "../devices";
 import { MediaIdle, SpotifyCard } from "./SpotifyCard";
 import { CardLinks } from "./CardLinks";
 import { usePlan } from "../plan";
@@ -67,6 +68,8 @@ export function displayState(state: HassEntity | undefined, entity: DiscoveredEn
   if (entity.domain === "script") return state.state === "on" ? t("scriptRunning") : t("runScript");
   if (entity.domain === "button" || entity.domain === "input_button") return t("pressButton");
   if (SELECTS.has(entity.domain)) return state.state;
+  // Doors read "Open", motion "Detected"... (Home Assistant's wording), never a plain on/off.
+  if (entity.domain === "binary_sensor") { const text = binarySensorText(state, t); if (text) return text; }
   if (state.state === "on") return t("on");
   if (state.state === "off") return t("off");
   if (state.state === "open") return t("open");
@@ -103,6 +106,7 @@ export function EntityCard(props: EntityCardProps) {
 }
 
 function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps) {
+  const childOn = useDevicePref(childLocked);
   const [busy, setBusy] = useState(false);
   const [brightnessDraft, setBrightnessDraft] = useState<number | null>(null);
   const holdTimer = useRef<number | null>(null);
@@ -110,7 +114,7 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
   const held = useRef(false);
   const wide = useWideTile();
   const state = hass.states[entity.entity_id];
-  const active = ACTIVE_STATES.has(state?.state ?? "");
+  const active = entity.domain === "cover" ? coverOn(entity, state?.state) : ACTIVE_STATES.has(state?.state ?? "");
   const unavailable = !state || ["unavailable", "unknown"].includes(state.state);
   const customize = useCustomize();
   // Optional, per card: the highlight takes the color the light is showing.
@@ -212,7 +216,10 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
       role="button"
       tabIndex={0}
     >
+      {/* A big faded drawing of the device's icon, only shown by the Kids layout. */}
+      {entity.domain !== "camera" && <span aria-hidden="true" className="device-tile__art"><EntityIcon entity={entity} size={96} /></span>}
       {busy && <span className="device-tile__busy" />}
+      {childOn && entity.child_lock && <span aria-label={t("childLockLocked")} className="device-tile__lock" role="img"><HDIcon name="lock" size={14} /></span>}
       {confirming && <span aria-live="polite" className="device-tile__confirm">{confirmLabel}</span>}
       <div className="device-tile__top">{entity.domain === "media_player" && mediaArt(state)
         ? <span className="device-tile__icon device-tile__icon--art" style={{ backgroundImage: mediaArt(state)! }} />
@@ -229,10 +236,10 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
 
 
       {!wide && entity.domain === "cover" && !unavailable && (
-        <div className="device-controls device-controls--cover">
-          <button aria-label={t("openCover")} onClick={() => void run(() => hass.callService("cover", "open_cover", { entity_id: entity.entity_id }))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={20} /></span></button>
+        <div className={`device-controls device-controls--cover${entity.cover_side_buttons ? " device-controls--side" : ""}`}>
+          <button aria-label={t("openCover")} onClick={() => void run(() => hass.callService("cover", coverMove(entity, "up"), { entity_id: entity.entity_id }))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={20} /></span></button>
           <button aria-label={t("stopCover")} onClick={() => void run(() => hass.callService("cover", "stop_cover", { entity_id: entity.entity_id }))} type="button"><HDIcon name="stop" size={16} /></button>
-          <button aria-label={t("closeCover")} onClick={() => void run(() => hass.callService("cover", "close_cover", { entity_id: entity.entity_id }))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={20} /></span></button>
+          <button aria-label={t("closeCover")} onClick={() => void run(() => hass.callService("cover", coverMove(entity, "down"), { entity_id: entity.entity_id }))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={20} /></span></button>
         </div>
       )}
 

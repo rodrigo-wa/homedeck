@@ -1,4 +1,4 @@
-import { isRoomLight } from "../personalize";
+import { inRoom, isRoomLight } from "../personalize";
 import { useState } from "react";
 import { ContextHeader } from "../components/ContextHeader";
 import { EditableGrid } from "../components/EditableGrid";
@@ -30,7 +30,7 @@ export function RoomScreen(props: ScreenProps & { onSelectRoom: (roomId: string)
   const own = new Set(room.entities.map((entity) => entity.entity_id));
   // Devices brought in from other rooms in edit mode.
   const added = (layout.added ?? []).filter((id) => !own.has(id) && everywhere.byId.has(id));
-  const byId = new Map([...room.entities, ...added.map((id) => everywhere.byId.get(id)!)].map((entity) => [entity.entity_id, entity]));
+  const byId = new Map([...room.entities, ...added.map((id) => everywhere.byId.get(id)!)].map((entity) => [entity.entity_id, inRoom(entity, screen, config.room_names?.[screen])]));
   const { visible, hidden } = arrange([...natural.map((entity) => entityKey(entity.entity_id)), ...added.map(entityKey)], layout, true);
   const setAdded = (ids: string[]) => onLayout(screen, { ...layout, added: ids });
 
@@ -75,6 +75,7 @@ export function RoomScreen(props: ScreenProps & { onSelectRoom: (roomId: string)
                   return { key, label: entity.name, removal: own.has(entity.entity_id) ? "hide" : "remove", node: <EntityCard entity={entity} hass={hass} language={language} onLongPress={setModalEntity} t={t} /> };
                 })}
                 addLabel={t("addDevices")}
+                roomScreen={screen}
                 layout={layout}
                 onAdd={() => setPicking(true)}
                 onLayout={(next) => onLayout(screen, next)}

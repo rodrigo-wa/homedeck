@@ -24,7 +24,7 @@ export function applyAudience(data: DiscoveryResponse, hiddenFor: HomeDeckConfig
 export const isRoomLight = (entity: DiscoveredEntity) => entity.domain === "light" && !entity.hidden;
 
 /** The cover options copied onto each card (see HomeDeckEntityOptions). */
-const COVER_FLAGS = ["cover_no_tap", "cover_invert_position", "cover_invert_state"] as const;
+const COVER_FLAGS = ["cover_no_tap", "cover_swap_buttons", "cover_invert_position", "cover_invert_state", "cover_side_buttons"] as const;
 
 export function personalize(data: DiscoveryResponse, names: HomeDeckConfig["names"], rooms: HomeDeckConfig["rooms"] | undefined, entityOptions?: HomeDeckConfig["entity_options"], haIcons = false, layouts?: HomeDeckConfig["layouts"], haRoomIcons = false): DiscoveryResponse {
   const nicknames = names ?? {};
@@ -48,10 +48,10 @@ export function personalize(data: DiscoveryResponse, names: HomeDeckConfig["name
           const nickname = nicknames[entity.entity_id];
           const own = perEntity[entity.entity_id] ?? {};
           // The tile's icon: the one chosen for this device, else Home Assistant's when that option is on.
-          const icon = own.icon || (haIcons && entity.icon?.includes(":") ? "ha" : undefined);
+          const icon = own.icon || (haIcons ? "ha" : undefined);
           const off = hidden.has(`entity:${entity.entity_id}`);
-          if (!nickname && !icon && !own.confirm && !own.light_accent && !own.visible_when && !own.not_security && !COVER_FLAGS.some((flag) => own[flag]) && !off) return entity;
-          return { ...entity, ...(nickname ? { name: nickname, original_name: entity.name } : {}), ...(icon ? { display_icon: icon } : {}), ...(own.confirm ? { confirm: true } : {}), ...(own.light_accent ? { light_accent: true } : {}), ...(own.visible_when ? { visible_when: own.visible_when } : {}), ...(own.not_security ? { not_security: true } : {}), ...Object.fromEntries(COVER_FLAGS.filter((flag) => own[flag]).map((flag) => [flag, true])), ...(off ? { hidden: true } : {}) };
+          if (!nickname && !icon && !own.confirm && !own.child_lock && !own.light_accent && !own.visible_when && !own.not_security && !COVER_FLAGS.some((flag) => own[flag]) && !off) return entity;
+          return { ...entity, ...(nickname ? { name: nickname, original_name: entity.name } : {}), ...(icon ? { display_icon: icon } : {}), ...(own.confirm ? { confirm: true } : {}), ...(own.child_lock ? { child_lock: true } : {}), ...(own.light_accent ? { light_accent: true } : {}), ...(own.visible_when ? { visible_when: own.visible_when } : {}), ...(own.not_security ? { not_security: true } : {}), ...Object.fromEntries(COVER_FLAGS.filter((flag) => own[flag]).map((flag) => [flag, true])), ...(off ? { hidden: true } : {}) };
         }),
       };
     }),
@@ -160,6 +160,12 @@ export function isTemperatureSensor(state?: HassEntity): boolean {
   return Boolean(state && state.entity_id.startsWith("sensor.") && state.attributes.device_class === "temperature");
 }
 
+/** A room's devices as shown there: marked with the room's screen, and with the name given only in that room. */
+export function inRoom(entity: DiscoveredEntity, screen: string, names: Record<string, string> | undefined): DiscoveredEntity {
+  const own = names?.[entity.entity_id];
+  return { ...entity, room_screen: screen, ...(own ? { name: own, global_name: entity.name } : {}) };
+}
+
 /** Lets details sheets and room headers save a nickname or a room option (absent outside the panel). */
 export const CustomizeContext = createContext<{
   /** The device as discovered now, with its current nickname (a details sheet may outlive a rename). */
@@ -180,5 +186,8 @@ export const CustomizeContext = createContext<{
   /** The name a linked device shows inside this card ("" when it uses its own). */
   linkName: (itemKey: string, entityId: string) => string;
   setLinkName: (itemKey: string, entityId: string, name: string) => void;
+  /** The name a device has only in this room ("" when it uses its usual name). */
+  roomName: (screen: string, entityId: string) => string;
+  setRoomName: (screen: string, entityId: string, name: string) => void;
 } | null>(null);
 export const useCustomize = () => useContext(CustomizeContext);

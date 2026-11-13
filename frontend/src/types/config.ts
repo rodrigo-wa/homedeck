@@ -27,7 +27,9 @@ export type HomeDeckBackgroundPreset =
   | "fixed_amber"
   | "fixed_lime";
 
-export type HomeDeckViewMode = "grid" | "sidebar" | "list" | "focus";
+export type HomeDeckViewMode = "grid" | "sidebar" | "list" | "focus" | "kids";
+/** The animated scenes behind the Kids layout. */
+export type HomeDeckKidsScene = "sky" | "ocean" | "space" | "candy" | "fairy" | "road";
 
 export type HomeDeckPageType = "favorites" | "scenes" | "custom" | "cameras";
 
@@ -81,6 +83,8 @@ export interface HomeDeckConfig {
   card_links?: Record<string, string[]>;
   /** The name each of those devices shows inside that card; none means its own name. */
   card_link_names?: Record<string, Record<string, string>>;
+  /** A device's name in one room only (Edit → details → rename, "Only in this room"): room screen to entity id to name. */
+  room_names?: Record<string, Record<string, string>>;
   /** Who a card or room is not shown to: card key to Home Assistant user ids. */
   hidden_for?: Record<string, string[]>;
   /** The waste collection card: a sensor, a name and a color for each bin. */
@@ -93,6 +97,8 @@ export interface HomeDeckConfig {
   free_rooms: string[];
   /** How Home and rooms are laid out. */
   view_mode: HomeDeckViewMode;
+  /** Background of the Kids layout (Pro). */
+  kids_background?: HomeDeckKidsScene;
   preferences: {
     temperature_unit: string;
     clock: string;
@@ -177,6 +183,10 @@ export interface HomeDeckConfig {
     /** Under the clock: today's events and the reminders due (same calendars and list as the agenda). */
     show_events?: boolean;
     show_todo?: boolean;
+    /** Up to six temperature sensors under the clock, each named by its room. */
+    sensors?: string[];
+    /** "large" makes the date, weather and temperatures bigger, to read from across the room. */
+    size?: "normal" | "large";
   };
   /** Optional cards on Home: the bigger weather card, the sun and (Pro) energy. All off by default. */
   widgets: {
@@ -215,6 +225,8 @@ export interface HomeDeckRoomOptions {
 export interface HomeDeckEntityOptions {
   icon?: string;
   confirm?: boolean;
+  /** Does nothing while the child lock is on (on the devices that use it). */
+  child_lock?: boolean;
   /** While on, the card's highlight takes the color of the light. */
   light_accent?: boolean;
   /** Outside Edit mode, the card only shows while these rules are met. */
@@ -227,6 +239,10 @@ export interface HomeDeckEntityOptions {
   cover_invert_position?: boolean;
   /** Covers whose open/closed caption comes the other way round: the caption is reversed. */
   cover_invert_state?: boolean;
+  /** Small cover tiles: the up, stop and down buttons stacked on the right, so the tile keeps the height of the others. */
+  cover_side_buttons?: boolean;
+  /** Covers wired the other way round: the up and down buttons are swapped. */
+  cover_swap_buttons?: boolean;
 }
 
 /** A tap that dismisses the notice until it changes, turns its entity off or runs a script, button, automation or scene. */

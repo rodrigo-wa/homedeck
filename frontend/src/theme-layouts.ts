@@ -223,7 +223,8 @@ export const themeLayouts = String.raw`
 @media (max-width: 720px) {
   .app-shell.view-sidebar > .screen.sb-layout { grid-template-columns: minmax(0, 1fr); padding: calc(var(--u)*2.4) calc(var(--u)*2.4) calc(var(--u)*6); }
   .app-shell .sb-side { position: static; max-height: none; }
-  .app-shell.view-sidebar > .screen.sb-layout { grid-template-areas: "status" "side" "main"; grid-template-rows: auto; }
+  .app-shell.view-sidebar > .screen.sb-layout { grid-template-areas: "status" "side" "main"; grid-template-rows: auto auto 1fr; align-content: start; }
+  /* A short room left free space that the rows shared, so the room title moved from room to room: the room content takes it. */
   .app-shell .sb-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
   .app-shell .sb-nav__rooms { flex-direction: row; }
   .app-shell .sb-nav__rooms > .hd-item { flex: none; }

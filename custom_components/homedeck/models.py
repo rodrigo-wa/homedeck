@@ -116,6 +116,9 @@ class HomeDeckScreensaverConfig(TypedDict):
     delay: int
     show_events: bool
     show_todo: bool
+    # Up to three temperature sensors under the clock, and the size of the clock's text.
+    sensors: list[str]
+    size: str
 
 
 class HomeDeckDoorbellConfig(TypedDict):
@@ -177,11 +180,14 @@ class HomeDeckConfig(TypedDict):
     hidden_for: dict[str, list[str]]
     bins: list[dict[str, str]]
     card_link_names: dict[str, dict[str, str]]
+    # A device's name in one room only, when it shows in several: room screen to entity id to name.
+    room_names: dict[str, dict[str, str]]
     ha_icons: bool
     ha_room_icons: bool
     free_devices: list[str]
     free_rooms: list[str]
     view_mode: str
+    kids_background: str
     preferences: HomeDeckPreferences
     home: HomeDeckHeaderConfig
     global_actions: HomeDeckGlobalActionsConfig
@@ -227,11 +233,13 @@ def default_config() -> HomeDeckConfig:
         "hidden_for": {},
         "bins": [],
         "card_link_names": {},
+        "room_names": {},
         "ha_icons": False,
         "ha_room_icons": False,
         "free_devices": [],
         "free_rooms": [],
         "view_mode": "grid",
+        "kids_background": "sky",
         "preferences": {
             "temperature_unit": "auto",
             "clock": "auto",
@@ -293,6 +301,8 @@ def default_config() -> HomeDeckConfig:
             "delay": 180,
             "show_events": False,
             "show_todo": False,
+            "sensors": [],
+            "size": "normal",
         },
         # Empty calendars means every calendar; an empty to-do entity means the first list.
         "agenda": {

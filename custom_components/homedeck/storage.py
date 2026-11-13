@@ -40,7 +40,8 @@ _ALLOWED_BACKGROUNDS = {
     "fixed_lime",
 }
 _ALLOWED_FORECAST_TYPES = {"daily", "hourly"}
-_ALLOWED_VIEW_MODES = {"grid", "sidebar", "list", "focus"}
+_ALLOWED_VIEW_MODES = {"grid", "sidebar", "list", "focus", "kids"}
+_ALLOWED_KIDS_SCENES = {"sky", "ocean", "space", "candy", "fairy", "road"}
 _ALLOWED_PAGE_TYPES = {"favorites", "scenes", "custom", "cameras"}
 _MAX_LAYOUTS = 300
 _MAX_LAYOUT_ITEMS = 500
@@ -178,6 +179,24 @@ def _normalize_card_link_names(value: Any) -> dict[str, dict[str, str]]:
     return result
 
 
+def _normalize_room_names(value: Any) -> dict[str, dict[str, str]]:
+    """A device's name in one room only: room screen ("room:…") to entity id to name."""
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, dict[str, str]] = {}
+    for key, names in list(value.items())[:_MAX_LAYOUT_ITEMS]:
+        if not (isinstance(key, str) and key.startswith("room:") and len(key) <= _MAX_KEY_LENGTH and isinstance(names, dict)):
+            continue
+        clean = {
+            entity_id: name.strip()[:40]
+            for entity_id, name in list(names.items())[:_MAX_LAYOUT_ITEMS]
+            if isinstance(entity_id, str) and _BADGE_ENTITY.match(entity_id) and isinstance(name, str) and name.strip()
+        }
+        if clean:
+            result[key] = clean
+    return result
+
+
 def _normalize_card_links(value: Any) -> dict[str, list[str]]:
     """Extra devices shown inside double and large cards: card key to at most two entity ids."""
     if not isinstance(value, dict):
@@ -256,9 +275,11 @@ def _normalize_entity_options(value: Any) -> dict[str, dict[str, Any]]:
             clean["icon"] = icon
         if options.get("confirm") is True:
             clean["confirm"] = True
+        if options.get("child_lock") is True:
+            clean["child_lock"] = True
         if options.get("light_accent") is True:
             clean["light_accent"] = True
-        for flag in ("not_security", "cover_no_tap", "cover_invert_position", "cover_invert_state"):
+        for flag in ("not_security", "cover_no_tap", "cover_swap_buttons", "cover_invert_position", "cover_invert_state", "cover_side_buttons"):
             if options.get(flag) is True:
                 clean[flag] = True
         when = _normalize_condition(options.get("visible_when"))
@@ -364,12 +385,16 @@ def normalize_config(value: Any) -> HomeDeckConfig:
     config["free_rooms"] = _unique_strings(value.get("free_rooms"))[:50]
     if value.get("view_mode") in _ALLOWED_VIEW_MODES:
         config["view_mode"] = value["view_mode"]
+    # The background of the Kids layout (its own, so the regular one is kept for the other layouts).
+    if value.get("kids_background") in _ALLOWED_KIDS_SCENES:
+        config["kids_background"] = value["kids_background"]
 
     config["rooms"] = _normalize_rooms(value.get("rooms"))
     config["names"] = _normalize_names(value.get("names"))
     config["entity_options"] = _normalize_entity_options(value.get("entity_options"))
     config["card_links"] = _normalize_card_links(value.get("card_links"))
     config["card_link_names"] = _normalize_card_link_names(value.get("card_link_names"))
+    config["room_names"] = _normalize_room_names(value.get("room_names"))
     config["hidden_for"] = _normalize_hidden_for(value.get("hidden_for"))
     config["bins"] = _normalize_bins(value.get("bins"))
     if isinstance(value.get("ha_icons"), bool):
@@ -508,6 +533,11 @@ def normalize_config(value: Any) -> HomeDeckConfig:
         delay = screensaver.get("delay")
         if isinstance(delay, int) and delay in _SCREENSAVER_DELAYS:
             config["screensaver"]["delay"] = delay
+        config["screensaver"]["sensors"] = [
+            item for item in _unique_strings(screensaver.get("sensors")) if item.startswith("sensor.") and _BADGE_ENTITY.match(item)
+        ][:6]
+        if screensaver.get("size") in ("normal", "large"):
+            config["screensaver"]["size"] = screensaver["size"]
 
     agenda = value.get("agenda")
     if isinstance(agenda, dict):

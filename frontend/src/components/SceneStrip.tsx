@@ -12,6 +12,8 @@ import { HDIcon } from "./HDIcon";
 /** Where the strip keeps its order, hidden scenes and scenes added from other rooms. */
 export const SCENES_STRIP = "home:scenes";
 const UNASSIGNED = "__unassigned__";
+/** Scripts are never in the strip on their own: only the ones added in edit mode, run with one tap. */
+const isScript = (id: string) => id.startsWith("script.");
 
 /** Scenes of Home, above the devices in every layout: the scenes of the panel's rooms and the ones
  * without a room (Home Assistant often leaves scenes without an area). In edit mode they can be
@@ -62,7 +64,7 @@ export function SceneStrip({ props }: { props: ScreenProps }) {
             key: entityKey(id),
             label: name,
             removal: nativeSet.has(id) ? "hide" : "remove",
-            node: <button onClick={() => void hass.callService("scene", "turn_on", { entity_id: id })} type="button"><HDIcon name="scene" size={18} /><span>{name}</span></button>,
+            node: <button onClick={() => void hass.callService(isScript(id) ? "script" : "scene", "turn_on", { entity_id: id })} type="button"><HDIcon name={isScript(id) ? "play" : "scene"} size={18} /><span>{name}</span></button>,
           };
         })}
         layout={layout}
@@ -72,7 +74,7 @@ export function SceneStrip({ props }: { props: ScreenProps }) {
         sizable={false}
         t={t}
       />
-      {picking && <EntityPicker domains={["scene"]} language={language} onClose={() => setPicking(false)} onToggle={toggle} rooms={props.catalogRooms} selected={shown} t={t} title={t("addScenes")} />}
+      {picking && <EntityPicker domains={["scene", "script"]} language={language} onClose={() => setPicking(false)} onToggle={toggle} rooms={props.catalogRooms} selected={shown} t={t} title={t("addScenes")} />}
     </section>
   );
 }

@@ -20,6 +20,37 @@ const VACUUM_LABELS: Record<string, TranslationKey> = {
   error: "vacuumError",
 };
 
+/** A cover counts as "on" while closed (or closing), the way a shut blind reads in a home; a cover whose
+ * open/closed caption is reversed in its options is reversed here too. */
+/** Home Assistant's own state wording ("Open", "Detected", "Wet"...), in the user's language. Set by the app
+ * from hass on every render; older Home Assistant versions don't have it. */
+let haStateText: ((state: HassEntity) => string) | null = null;
+export function setStateText(hass: HomeAssistant): void {
+  const format = (hass as unknown as { formatEntityState?: (state: HassEntity) => string }).formatEntityState;
+  haStateText = typeof format === "function" ? (state) => format.call(hass, state) : null;
+}
+const OPENINGS = new Set(["door", "window", "opening", "garage_door"]);
+/** A binary sensor's state as words: Home Assistant's own, or open/closed for doors and windows without it. */
+export function binarySensorText(state: HassEntity, t: (key: TranslationKey) => string): string | null {
+  if (haStateText) {
+    try { const text = haStateText(state); if (text) return text; } catch { /* fall back below */ }
+  }
+  if (OPENINGS.has(String(state.attributes.device_class))) return state.state === "on" ? t("open") : t("closed");
+  return null;
+}
+
+/** The service behind the up (open) or down (close) button: swapped for a cover set to "Reverse up and down". */
+export function coverMove(entity: { cover_swap_buttons?: boolean }, direction: "up" | "down"): "open_cover" | "close_cover" {
+  const up = direction === "up" ? !entity.cover_swap_buttons : Boolean(entity.cover_swap_buttons);
+  return up ? "open_cover" : "close_cover";
+}
+
+export function coverOn(entity: { cover_invert_state?: boolean }, state?: string): boolean {
+  const shut = state === "closed" || state === "closing";
+  const open = state === "open" || state === "opening";
+  return entity.cover_invert_state ? open : shut;
+}
+
 export function runEntity(hass: HomeAssistant, entityId: string): Promise<unknown> {
   const domain = entityId.split(".")[0];
   return domain === "script"

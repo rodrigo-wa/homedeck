@@ -1,5 +1,7 @@
 import figtreeLatin from "@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2?url";
 import figtreeLatinExt from "@fontsource-variable/figtree/files/figtree-latin-ext-wght-normal.woff2?url";
+import fredokaLatin from "@fontsource-variable/fredoka/files/fredoka-latin-wght-normal.woff2?url";
+import fredokaLatinExt from "@fontsource-variable/fredoka/files/fredoka-latin-ext-wght-normal.woff2?url";
 import outfitLatin from "@fontsource-variable/outfit/files/outfit-latin-wght-normal.woff2?url";
 import outfitLatinExt from "@fontsource-variable/outfit/files/outfit-latin-ext-wght-normal.woff2?url";
 
@@ -22,6 +24,9 @@ export function installFonts(): void {
     face("HomeDeck Outfit", outfitLatin, LATIN),
     face("HomeDeck Figtree", figtreeLatinExt, LATIN_EXT),
     face("HomeDeck Figtree", figtreeLatin, LATIN),
+    // Rounded type of the Kids layout; the browser only downloads it when that layout is on.
+    face("HomeDeck Fredoka", fredokaLatinExt, LATIN_EXT),
+    face("HomeDeck Fredoka", fredokaLatin, LATIN),
   ].join("");
   document.head.append(style);
 }

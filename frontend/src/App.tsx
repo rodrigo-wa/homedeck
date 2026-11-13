@@ -14,12 +14,16 @@ import { Screensaver } from "./components/Screensaver";
 import { pauseCameras } from "./cameraPause";
 import { DoorbellPopup, useDoorbell } from "./components/Doorbell";
 import { forgetCalendarColors, useOccasion } from "./components/Agenda";
-import { editingLocked, keepAwakeMode, useDevicePref } from "./devicePrefs";
+import { childLocked, childLockNote, deviceBackground, deviceKidsScene, deviceViewMode, editingLocked, keepAwakeMode, useChildLockNote, useDevicePref } from "./devicePrefs";
+import { guardHass, type ChildLockState } from "./childLock";
+import { VIEW_MODES } from "./components/LayoutPicker";
+import { KIDS_SCENES } from "./components/KidsScene";
 import { keepAwakeWanted, startKeepAwake } from "./keepAwake";
 import { createTranslator } from "./i18n";
 import { migrateLayouts, withLayout } from "./layout";
 import { effectiveConfig, freeDevices, isControllable, overFreeLimits, panelRoomIds, PlanContext, restrictRooms, type PlanState, type UpsellReason } from "./plan";
 import { availableSections } from "./security";
+import { setStateText } from "./devices";
 import { applyAudience, CustomizeContext, personalize, withNickname, withEntityOptions, withRoomOptions } from "./personalize";
 import { PageScreen } from "./screens/PageScreen";
 import { pageId, type PageRef } from "./screens/pages";
@@ -34,8 +38,23 @@ import type { DiscoveryResponse } from "./types/discovery";
 import type { HomeAssistant } from "./types/home-assistant";
 
 const DEFAULT_LIMITS = { rooms: 4, devices: 10 };
+/** A minute without a touch brings the panel back to Home. */
+const IDLE_HOME_MS = 60_000;
 
-export function App({ hass, version }: { hass: HomeAssistant; version?: string }) {
+/** The panel's settings with this device's own layout, background and Kids scene, when it has them. */
+function onThisDevice(config: HomeDeckConfig, view: string, background: string, kids: string): HomeDeckConfig {
+  const mode = VIEW_MODES.find((item) => item.id === view)?.id;
+  const scene = KIDS_SCENES.find(([id]) => id === kids)?.[0];
+  const preset = /^(adaptive|fixed)_[a-z]+$/.test(background) ? (background as HomeDeckConfig["background"]["preset"]) : undefined;
+  if (!mode && !scene && !preset) return config;
+  return { ...config, ...(mode ? { view_mode: mode } : {}), ...(scene ? { kids_background: scene } : {}), ...(preset ? { background: { ...config.background, preset } } : {}) };
+}
+
+export function App({ hass: haHass, version }: { hass: HomeAssistant; version?: string }) {
+  // Every screen gets hass through the child lock, which drops calls to locked devices while it is on.
+  const childLock = useRef<ChildLockState>({ locked: false, ids: new Set() });
+  const hass = useMemo(() => guardHass(haHass, childLock), [haHass]);
+  setStateText(hass);
   const [rawData, setData] = useState<DiscoveryResponse | null>(null);
   const [config, setConfig] = useState<HomeDeckConfig | null>(null);
   const [license, setLicense] = useState<LicenseStatus | null>(null);
@@ -138,7 +157,12 @@ export function App({ hass, version }: { hass: HomeAssistant; version?: string }
 
   const limits = license?.limits ?? DEFAULT_LIMITS;
   const allowed = useMemo(() => (pro || !config || !data ? null : new Set(freeDevices(config, data.rooms))), [pro, config, data]);
-  const view = useMemo(() => (config ? effectiveConfig(config, pro) : null), [config, pro]);
+  // This device's own layout and background (Settings → This device) go over the panel's, before the plan's
+  // limits, so Pro layouts and backgrounds still need Pro.
+  const devView = useDevicePref(deviceViewMode);
+  const devBackground = useDevicePref(deviceBackground);
+  const devKids = useDevicePref(deviceKidsScene);
+  const view = useMemo(() => (config ? effectiveConfig(onThisDevice(config, devView, devBackground, devKids), pro) : null), [config, pro, devView, devBackground, devKids]);
 
   const plan = useMemo<PlanState>(() => ({
     pro,
@@ -179,12 +203,19 @@ export function App({ hass, version }: { hass: HomeAssistant; version?: string }
       const { [itemKey]: _card, ...others } = current.card_link_names ?? {};
       return { ...current, card_link_names: Object.keys(next).length > 0 ? { ...others, [itemKey]: next } : others };
     }),
+    roomName: (screen: string, entityId: string) => config?.room_names?.[screen]?.[entityId] ?? "",
+    setRoomName: (screen: string, entityId: string, name: string) => void updateConfig((current) => {
+      const { [entityId]: _old, ...names } = current.room_names?.[screen] ?? {};
+      const next = name.trim() ? { ...names, [entityId]: name.trim() } : names;
+      const { [screen]: _room, ...others } = current.room_names ?? {};
+      return { ...current, room_names: Object.keys(next).length > 0 ? { ...others, [screen]: next } : others };
+    }),
     setLinks: (itemKey: string, ids: string[]) => void updateConfig((current) => {
       const { [itemKey]: _previous, ...rest } = current.card_links ?? {};
       return { ...current, card_links: ids.length > 0 ? { ...rest, [itemKey]: ids } : rest };
     }),
     };
-  }, [data, updateConfig, config?.card_links, config?.card_link_names, config?.hidden_for, hiddenFor, hass.user?.id]);
+  }, [data, updateConfig, config?.card_links, config?.card_link_names, config?.room_names, config?.hidden_for, hiddenFor, hass.user?.id]);
 
   useEffect(() => { pauseCameras("screensaver", saverOn); }, [saverOn]);
 
@@ -209,13 +240,34 @@ export function App({ hass, version }: { hass: HomeAssistant; version?: string }
   // Doorbell (Pro): a ring wakes the panel and shows the camera above everything.
   const [ringing, setRinging] = useState(false);
   // A wall tablet can lock editing: no Edit button, and Edit mode closes if it was open.
-  const locked = useDevicePref(editingLocked);
+  const childOn = useDevicePref(childLocked);
+  // While the child lock is on, editing stays locked too, so the lock cannot be turned off from Settings.
+  const locked = useDevicePref(editingLocked) || childOn;
+  childLock.current = { locked: childOn, ids: new Set(Object.entries(config?.entity_options ?? {}).filter(([, options]) => options.child_lock).map(([id]) => id)) };
+  const lockNote = useChildLockNote();
   // Echo Show and other wall screens: keep the browser open and the display on (per device).
   const awake = useDevicePref(keepAwakeMode);
   useEffect(() => (keepAwakeWanted(awake) ? startKeepAwake() : undefined), [awake]);
   useEffect(() => { if (locked) setEditing(false); }, [locked]);
   useDoorbell(hass, view?.doorbell, useCallback(() => { dismissSaver(); setRinging(true); }, [dismissSaver]));
   const stopRinging = useCallback(() => { lastActivity.current = Date.now(); setRinging(false); }, []);
+  // After a minute with nobody touching the panel, it goes back to Home, in any layout. Not while the
+  // screensaver, Edit mode, Settings or the doorbell are up, nor on the cameras, the full-screen player or a
+  // full-screen camera, which are meant to be watched.
+  const probe = useRef<HTMLSpanElement>(null);
+  const cameraPage = activePage === "cameras" || view?.pages.some((page) => page.id === activePage && page.type === "cameras");
+  useEffect(() => {
+    if (activePage === "home" || editing || settingsOpen || saverOn || ringing || cameraPage) return;
+    const timer = window.setInterval(() => {
+      if (Date.now() - lastActivity.current < IDLE_HOME_MS) return;
+      const root = probe.current?.getRootNode() as Document | ShadowRoot | undefined;
+      if (root?.querySelector(".hd-player, .hd-camera, .hd-camera__full, .hd-doorbell")) return;
+      setSelectedRoomId(null);
+      setActivePage("home");
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [activePage, editing, settingsOpen, saverOn, ringing, cameraPage]);
+
   // Special dates (Pro): the occasion near or happening now, and New Year's fireworks.
   const season = useOccasion(view, hass, t);
 
@@ -321,7 +373,7 @@ export function App({ hass, version }: { hass: HomeAssistant; version?: string }
     language,
     onConfig: (update) => void updateConfig(update),
     onLayout: (screen: string, layout: ScreenLayout) => void updateConfig((current) => withLayout(current, screen, pro ? layout : { ...layout, wide: current.layouts[screen]?.wide ?? [], tall: current.layouts[screen]?.tall ?? [] })),
-    onSettings: () => { setEditing(false); setSettingsOpen(true); },
+    onSettings: () => { if (childOn) { childLockNote("hold"); return; } setEditing(false); setSettingsOpen(true); },
     onToggleEdit: () => { if (!locked) setEditing((current) => !current); },
     t,
   };
@@ -361,7 +413,9 @@ export function App({ hass, version }: { hass: HomeAssistant; version?: string }
       {!locked && <button aria-label={editing ? t("doneEditing") : t("editScreen")} aria-pressed={editing} className={editing ? "edit-fab edit-fab--on" : "edit-fab"} onClick={() => setEditing((current) => !current)} type="button">
         <HDIcon name={editing ? "check" : "pencil"} size={20} />
       </button>}
-      {saverOn && <Screensaver config={view} hass={hass} language={language} onDismiss={dismissSaver} t={t} />}
+      <span hidden ref={probe} />
+      {lockNote && <div className="hd-lock-note" role="status"><HDIcon name="lock" size={16} />{lockNote === "blocked" ? t("childLockBlocked") : childOn ? t("childLockHoldOff") : t("childLockHoldOn")}</div>}
+      {saverOn && <Screensaver config={view} hass={hass} language={language} onDismiss={dismissSaver} rooms={data?.rooms} t={t} />}
       {ringing && <DoorbellPopup camera={view.doorbell.camera} hass={hass} onClose={stopRinging} seconds={view.doorbell.seconds} t={t} />}
     </DynamicShell>,
   );

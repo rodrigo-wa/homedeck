@@ -1,4 +1,17 @@
+import { createContext, useContext, useEffect, useRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import type { HomeAssistant } from "../types/home-assistant";
+
+/** Home Assistant, for the icons it draws itself (ha-state-icon). Provided by the panel shell. */
+export const HassContext = createContext<HomeAssistant | null>(null);
+
+/** Home Assistant's own icon for an entity: from its device class and state, or the icon set in HA. */
+function HaStateIcon({ entityId, hass, size }: { entityId: string; hass: HomeAssistant; size: number }) {
+  const ref = useRef<HTMLElement & { hass?: unknown; stateObj?: unknown }>(null);
+  const state = hass.states[entityId];
+  useEffect(() => { if (ref.current) { ref.current.hass = hass; ref.current.stateObj = state; } });
+  return <ha-state-icon class="hd-ha-icon" ref={ref} style={{ "--mdc-icon-size": `${size}px`, width: size, height: size, display: "inline-flex" } as CSSProperties} />;
+}
 
 export type IconName =
   | "arrow"
@@ -20,6 +33,7 @@ export type IconName =
   | "kitchen"
   | "light"
   | "lock"
+  | "unlock"
   | "media"
   | "moon"
   | "people"
@@ -151,6 +165,7 @@ const paths: Record<IconName, ReactNode> = {
   kitchen: <><path d="M4 3v18M9 3v6a5 5 0 0 1-5 5M15 3v18M15 3c4 2 5 6 5 10h-5" /></>,
   light: <><path d="M9 18h6M10 22h4" /><path d="M8.5 14.5A6 6 0 1 1 15.5 14.5C14.5 15.2 14 16 14 18h-4c0-2-.5-2.8-1.5-3.5Z" /></>,
   lock: <><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
+  unlock: <><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 7.6-1.8" /></>,
   media: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m10 9 5 3-5 3V9Z" /></>,
   moon: <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />,
   people: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>,
@@ -284,8 +299,13 @@ export const DEVICE_ICONS: IconName[] = ["light", "fan", "switch", "power", "cov
 
 /** A device's tile icon: its chosen HomeDeck icon, Home Assistant's own icon ("ha", when it has one),
  * or the icon of its type, as before. */
-export function EntityIcon({ entity, size = 23 }: { entity: { domain: string; icon?: string | null; display_icon?: string }; size?: number }) {
+export function EntityIcon({ entity, size = 23 }: { entity: { domain: string; entity_id?: string; icon?: string | null; display_icon?: string }; size?: number }) {
   const choice = entity.display_icon;
+  const hass = useContext(HassContext);
+  // Home Assistant's icon, as HA itself draws it (device class and state included), when it can draw it here.
+  if (choice === HA_ICON && hass && entity.entity_id && hass.states[entity.entity_id] && typeof customElements !== "undefined" && customElements.get("ha-state-icon")) {
+    return <HaStateIcon entityId={entity.entity_id} hass={hass} size={size} />;
+  }
   if (choice === HA_ICON && entity.icon?.includes(":") && typeof customElements !== "undefined" && customElements.get("ha-icon")) {
     return <ha-icon class="hd-ha-icon" icon={entity.icon} style={{ "--mdc-icon-size": `${size}px`, width: size, height: size, display: "inline-flex" } as CSSProperties} />;
   }

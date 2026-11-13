@@ -22,6 +22,7 @@ function withDefaults(config: HomeDeckConfig): HomeDeckConfig {
     free_devices: config.free_devices ?? [],
     free_rooms: config.free_rooms ?? [],
     view_mode: config.view_mode ?? "grid",
+    kids_background: config.kids_background ?? "sky",
     highlight_color: config.highlight_color ?? "#ffc94d",
     screensaver: { enabled: false, delay: 180, ...(config.screensaver as Partial<HomeDeckConfig["screensaver"]> | undefined) },
     cards: { ...DEFAULT_CARDS, ...(config.cards as Partial<HomeDeckConfig["cards"]> | undefined) },

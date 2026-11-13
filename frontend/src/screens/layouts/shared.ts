@@ -1,9 +1,9 @@
-import { isRoomLight } from "../../personalize";
+import { inRoom, isRoomLight } from "../../personalize";
 import { useRef } from "react";
 import type { MouseEvent, PointerEvent } from "react";
 import { arrange, entityKey, getLayout, HOME_SCREEN, keyId, roomKey, roomScreen } from "../../layout";
 import { TOGGLES } from "../../components/EntityCard";
-import { RUNNABLE, runEntity } from "../../devices";
+import { coverOn, RUNNABLE, runEntity } from "../../devices";
 import type { HomeDeckConfig, ScreenLayout } from "../../types/config";
 import type { DiscoveredEntity, Room } from "../../types/discovery";
 import type { HomeAssistant } from "../../types/home-assistant";
@@ -29,7 +29,8 @@ export function roomLights(hass: HomeAssistant, room: Room) {
 }
 
 export function isOn(hass: HomeAssistant, entity: DiscoveredEntity): boolean {
-  return ACTIVE.has(hass.states[entity.entity_id]?.state ?? "");
+  const state = hass.states[entity.entity_id]?.state ?? "";
+  return entity.domain === "cover" ? coverOn(entity, state) : ACTIVE.has(state);
 }
 
 /** Same tap rule as the cards: switch what is safe to switch, otherwise open the details. */
@@ -102,7 +103,7 @@ export function roomItems(config: HomeDeckConfig, room: Room, allRooms: Room[]) 
   const own = new Set(room.entities.map((entity) => entity.entity_id));
   const natural = [...room.entities].sort((a, b) => DOMAIN_ORDER.indexOf(a.domain) - DOMAIN_ORDER.indexOf(b.domain) || a.name.localeCompare(b.name));
   const added = (layout.added ?? []).filter((id) => !own.has(id) && everything.has(id));
-  const byKey = new Map([...natural, ...added.map((id) => everything.get(id)!)].map((entity) => [entityKey(entity.entity_id), entity]));
+  const byKey = new Map([...natural, ...added.map((id) => everything.get(id)!)].map((entity) => [entityKey(entity.entity_id), inRoom(entity, screen, config.room_names?.[screen])]));
   const { visible, hidden } = arrange([...byKey.keys()], layout, true);
   return { screen, layout, own, added, byKey, visible, hidden };
 }

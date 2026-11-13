@@ -1,3 +1,4 @@
+import { coverOn } from "../devices";
 import { isRoomLight } from "../personalize";
 import { useMemo, useState } from "react";
 import type { CSSProperties } from "react";
@@ -24,7 +25,7 @@ interface RoomCardProps {
 export function RoomCard({ featured = false, hass, index, room, t, onOpen }: RoomCardProps) {
   const [busy, setBusy] = useState(false);
   const wide = useWideTile();
-  const activeCount = room.entities.filter((entity) => !entity.hidden && ACTIVE_STATES.has(hass.states[entity.entity_id]?.state)).length;
+  const activeCount = room.entities.filter((entity) => !entity.hidden && (entity.domain === "cover" ? coverOn(entity, hass.states[entity.entity_id]?.state) : ACTIVE_STATES.has(hass.states[entity.entity_id]?.state))).length;
   const lights = room.entities.filter(isRoomLight);
   const activeLights = lights.filter((entity) => hass.states[entity.entity_id]?.state === "on");
   const unavailable = room.entities.length > 0 && room.entities.every((entity) => ["unavailable", "unknown"].includes(hass.states[entity.entity_id]?.state));
@@ -46,6 +47,8 @@ export function RoomCard({ featured = false, hass, index, room, t, onOpen }: Roo
 
   return (
     <article className={`room-card ${active ? "room-card--active" : ""} ${featured ? "room-card--featured" : ""} ${unavailable ? "room-card--unavailable" : ""}`} style={accentStyle}>
+      {/* A big faded drawing of the room's icon, only shown by the Kids layout. */}
+      <span aria-hidden="true" className="room-card__art"><RoomIcon room={room} size={96} /></span>
       <button aria-label={`${t("openRoom")} ${roomName}`} className="room-card__open" onClick={onOpen} type="button"><span /></button>
       <div className="room-card__top">
         <span className="room-card__icon"><RoomIcon room={room} size={23} /></span>

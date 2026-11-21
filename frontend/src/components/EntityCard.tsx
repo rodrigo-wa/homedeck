@@ -1,3 +1,4 @@
+import { useConfirmGate } from "../confirmGate";
 import { useCustomize, useMinute } from "../personalize";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, MouseEvent, PointerEvent } from "react";
@@ -174,6 +175,8 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
 
   // A protected device ("Confirm before toggling" in its details) acts only on a second tap within 3 s.
   const [confirming, setConfirming] = useState(false);
+  // Covers: "Ask before switching" also covers the up, stop and down buttons and the position bar.
+  const coverGate = useConfirmGate(Boolean(entity.confirm) && entity.domain === "cover");
   const confirmTimer = useRef<number | null>(null);
   useEffect(() => () => { if (confirmTimer.current != null) window.clearTimeout(confirmTimer.current); }, []);
   // A cover set to ignore taps on its body keeps only its up, stop and down buttons.
@@ -223,7 +226,8 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
   // Covers set to "position only" (Card options) get a position bar at 1×, like a light's brightness.
   const coverReported = entity.domain === "cover" && entity.cover_control === "slider" && Number(state?.attributes.supported_features) & 4 ? Number(state?.attributes.current_position) : Number.NaN;
   const coverSlider = Number.isFinite(coverReported) ? (entity.cover_invert_position ? 100 - coverReported : coverReported) : null;
-  const setCoverPosition = (value: number) => { setCoverDraft(null); void run(() => hass.callService("cover", "set_cover_position", { entity_id: entity.entity_id, position: entity.cover_invert_position ? 100 - value : value })); };
+  // With "Ask before switching" the bar keeps the new position until a second release confirms it.
+  const setCoverPosition = (value: number) => coverGate.gate("position", () => { setCoverDraft(null); void run(() => hass.callService("cover", "set_cover_position", { entity_id: entity.entity_id, position: entity.cover_invert_position ? 100 - value : value })); });
   const setBrightness = (value: number) => { setBrightnessDraft(null); void run(() => hass.callService("light", "turn_on", { entity_id: entity.entity_id, brightness_pct: value })); };
   const commitKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.key)) setBrightness(Number(event.currentTarget.value));
@@ -256,14 +260,14 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
       {entity.domain !== "camera" && <span aria-hidden="true" className="device-tile__art"><EntityIcon entity={entity} size={96} /></span>}
       {busy && <span className="device-tile__busy" />}
       {childOn && entity.child_lock && <span aria-label={t("childLockLocked")} className="device-tile__lock" role="img"><HDIcon name="lock" size={14} /></span>}
-      {confirming && <span aria-live="polite" className="device-tile__confirm">{confirmLabel}</span>}
+      {(confirming || coverGate.pending) && <span aria-live="polite" className="device-tile__confirm">{coverGate.pending === "up" ? t(entity.cover_swap_buttons ? "confirmClose" : "confirmOpen") : coverGate.pending === "down" ? t(entity.cover_swap_buttons ? "confirmOpen" : "confirmClose") : coverGate.pending ? t("confirmTapAgain") : confirmLabel}</span>}
       <div className="device-tile__top">{entity.domain === "media_player" && mediaArt(state)
         ? <span className="device-tile__icon device-tile__icon--art" style={{ backgroundImage: mediaArt(state)! }} />
         : <span className="device-tile__icon"><EntityIcon entity={entity} /></span>}{entity.confirm && <span aria-hidden="true" className="device-tile__guard"><HDIcon name="lock" size={13} /></span>}</div>
       {!wide && entity.domain === "light" && !unavailable && dimmable && (
         <label className={state?.state === "on" ? "device-dimmer" : "device-dimmer device-dimmer--off"} style={{ "--value": `${brightnessDraft ?? brightness}%` } as CSSProperties}><span className="sr-only">{t("brightness")}</span><b aria-hidden="true" /><input aria-label={`${t("brightness")}: ${entity.name}`} max="100" min="1" onChange={(event) => setBrightnessDraft(Number(event.currentTarget.value))} onKeyUp={commitKey} onPointerUp={(event) => setBrightness(Number(event.currentTarget.value))} type="range" value={brightnessDraft ?? Math.max(1, brightness)} /></label>
       )}
-      <div className="device-tile__copy"><strong>{entity.name}</strong>{entity.domain !== "scene" && !(SELECTS.has(entity.domain) && !wide) && <span>{status}</span>}{showSince && sinceText && <small className="device-tile__since">{sinceText}</small>}</div>
+      <div className="device-tile__copy"><strong>{entity.name}</strong>{entity.domain !== "scene" && !(SELECTS.has(entity.domain) && !wide) && !(entity.domain === "cover" && entity.cover_no_status) && <span>{status}</span>}{showSince && sinceText && <small className="device-tile__since">{sinceText}</small>}</div>
 
       {wide && entity.domain === "sensor" && isNumericState(state) && <SensorSpark entityId={entity.entity_id} language={language} hass={hass} unit={typeof state?.attributes.unit_of_measurement === "string" ? state.attributes.unit_of_measurement : undefined} />}
       {wide && !unavailable && state && <div className="tile-wide">{SELECTS.has(entity.domain) && (customize?.linksFor(`entity:${entity.entity_id}`).length ?? 0) > 0
@@ -277,9 +281,9 @@ function DeviceCard({ entity, hass, language, onLongPress, t }: EntityCardProps)
       )}
       {!wide && entity.domain === "cover" && !unavailable && coverSlider == null && (
         <div className={`device-controls device-controls--cover${entity.cover_side_buttons ? " device-controls--side" : ""}`}>
-          <button aria-label={t("openCover")} onClick={() => void run(() => hass.callService("cover", coverMove(entity, "up"), { entity_id: entity.entity_id }))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={20} /></span></button>
-          <button aria-label={t("stopCover")} onClick={() => void run(() => hass.callService("cover", "stop_cover", { entity_id: entity.entity_id }))} type="button"><HDIcon name="stop" size={16} /></button>
-          <button aria-label={t("closeCover")} onClick={() => void run(() => hass.callService("cover", coverMove(entity, "down"), { entity_id: entity.entity_id }))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={20} /></span></button>
+          <button aria-label={t("openCover")} className={coverGate.pending === "up" ? "is-confirming" : undefined} onClick={() => coverGate.gate("up", () => void run(() => hass.callService("cover", coverMove(entity, "up"), { entity_id: entity.entity_id })))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={20} /></span></button>
+          <button aria-label={t("stopCover")} className={coverGate.pending === "stop" ? "is-confirming" : undefined} onClick={() => coverGate.gate("stop", () => void run(() => hass.callService("cover", "stop_cover", { entity_id: entity.entity_id })))} type="button"><HDIcon name="stop" size={16} /></button>
+          <button aria-label={t("closeCover")} className={coverGate.pending === "down" ? "is-confirming" : undefined} onClick={() => coverGate.gate("down", () => void run(() => hass.callService("cover", coverMove(entity, "down"), { entity_id: entity.entity_id })))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={20} /></span></button>
         </div>
       )}
 

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.19.1
+
+- Assist button (optional, in Settings → Home): a microphone at the top that opens Home Assistant's Assist, to talk or type to your home; in the companion app it opens the app's own Assist; only shows when Assist is set up.
+- Covers: "Ask before switching" now also covers the up, stop and down buttons and the position bar, on small and large cards (before, only a tap on the card asked for a second tap).
+- Separators: in Edit mode, "Starts folded" beside the title keeps a separator folded by default (each device still opens and closes it with a tap).
+- Covers: a "No status" option in the card's options, for covers that never report whether they are open or closed; the child lock padlock sits on the icon's corner, clear of the buttons.
+- Sensors at the top of a room: their details open above everything (they sat behind the cards); each sensor can show its icon, text or both, with your own text (card options, in Edit mode); the "Environment" heading above them only shows in Edit mode.
+- Floor plan in Edit mode: zoom with the mouse wheel or a pinch, and drag the background to move the zoomed plan; what you leave off the plan goes to a list under it (it used to stay faded inside the room, taking space).
+- Rooms by floor (Settings → Rooms): on a phone, the room bar gets one row per floor.
+- With a mouse, the navigation bar and the room bar can be dragged sideways (in the desktop app too).
+- Media player (options of the player's card, in Edit mode): "Open as a window" opens the player in a window over the panel instead of full screen; "Player parts" leaves out the cover, progress, shuffle and repeat, volume, speakers or the power button, in the player and on its card; and "Player buttons" adds your own buttons (scripts, scenes, switches, buttons), with the entity's picture when it has one, like a radio station's logo.
+- Scene strip: the child lock now applies to scene and script buttons, and the "Highlight when on" option (tap the button in Edit mode) lights the button while a chosen entity is on; the options also open for scenes and scripts without a room.
+- Weather: your own wind and pressure sensors (in Settings → Weather), besides temperature and humidity.
+- Weather forecast: the next hours can be dragged sideways with the mouse.
+- Vehicle card: the charging button says "Stop charging" while the car charges, and black and white colors.
+- Sidebar layout: the left column stays in place and only the content scrolls (the column used to scroll with the page).
+- Sidebar layout: the weather with its forecast, notices, people and buttons at the top wrap to a second line when the area is narrow, instead of slipping under the column.
+- Vehicle card: the chips no longer repeat what the status line already says (the range showed twice), the odometer shows as a chip from 2× up, and the Lock slot also accepts a lock binary sensor.
+- Combustion Vehicle card with no level sensor: shows just "—", without the word "fuel".
+- The small texts on the Overview cards (Security, Climate, Energy) keep their original casing, such as "smart EQ" and "kWh".
+
 ## 0.19.0
 
 - HomeDeck Desktop (Pro): an app for Mac and Windows that opens HomeDeck from the menu bar or the tray, with a click or ⌥⌘H / Ctrl+Alt+H. A compact, wide (three times wider) or full-screen window, with the system's own corners and adjustable transparency, Settings in the system's look and automatic updates. Download it at homedeck.pro/desktop; it needs this version of the integration.

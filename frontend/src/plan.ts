@@ -9,8 +9,11 @@ export const DEFAULT_ACCENT = "#f4edd9";
 export const DEFAULT_HIGHLIGHT = "#ffc94d";
 export const DEFAULT_CARDS: HomeDeckCardStyle = { corners: 100, frame: true, glass: 50, animations: false, sparklines: false, players: true };
 export const SUPPORT_EMAIL = "suporte@homedeck.pro";
-/** HomeDeck Desktop's download page (macOS and Windows). */
-export const DESKTOP_URL = "https://homedeck.pro/desktop/";
+/** HomeDeck Desktop's download page (macOS and Windows): English by default, also in Portuguese and Spanish. */
+export function desktopUrl(language?: string): string {
+  const lang = (language ?? "").slice(0, 2).toLowerCase();
+  return `https://homedeck.pro/desktop/${lang === "pt" || lang === "es" ? `${lang}/` : ""}`;
+}
 const CONTROLLABLE = new Set(["light", "switch", "fan", "cover", "climate", "media_player", "lock"]);
 
 /** Why the Pro sheet was opened; shown as its first line. */

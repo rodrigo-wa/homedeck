@@ -1,3 +1,4 @@
+import type { DiscoveredEntity } from "./types/discovery";
 import { setClockFormat } from "./clock";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
@@ -206,7 +207,16 @@ export function App({ hass: haHass, version }: { hass: HomeAssistant; version?: 
   const customize = useMemo(() => {
     const byId = new Map((data?.rooms ?? []).flatMap((room) => room.entities).map((entity) => [entity.entity_id, entity]));
     return {
-    lookup: (entityId: string) => byId.get(entityId),
+    // Scenes and scripts often have no area, so discovery never lists them: their options come from the config.
+    lookup: (entityId: string) => {
+      const found = byId.get(entityId);
+      const state = hass.states[entityId];
+      if (found || !state) return found;
+      const own = config?.entity_options?.[entityId] ?? {};
+      return { entity_id: entityId, domain: entityId.split(".")[0], name: config?.names?.[entityId] || String(state.attributes.friendly_name ?? entityId), area_id: "", device_id: null, device_class: null, icon: null,
+        ...(own.icon ? { display_icon: own.icon } : {}), ...(own.child_lock ? { child_lock: true } : {}), ...(own.confirm ? { confirm: true } : {}), ...(own.highlight_entity ? { highlight_entity: own.highlight_entity } : {}),
+        ...(own.pill_style ? { pill_style: own.pill_style } : {}), ...(own.pill_text ? { pill_text: own.pill_text } : {}), ...(own.player_window ? { player_window: true } : {}), ...(own.player_hide?.length ? { player_hide: own.player_hide } : {}), ...(own.player_buttons?.length ? { player_buttons: own.player_buttons } : {}) } as DiscoveredEntity;
+    },
     rename: (entityId: string, name: string, original: string) => void updateConfig((current) => withNickname(current, entityId, name, original)),
     setRoom: (roomId: string, change: { icon?: string; temperature?: string }) => void updateConfig((current) => withRoomOptions(current, roomId, change)),
     setEntity: (entityId: string, change: HomeDeckEntityOptions) => void updateConfig((current) => withEntityOptions(current, entityId, change)),
@@ -245,7 +255,7 @@ export function App({ hass: haHass, version }: { hass: HomeAssistant; version?: 
       return { ...current, card_links: ids.length > 0 ? { ...rest, [itemKey]: ids } : rest };
     }),
     };
-  }, [data, updateConfig, config?.card_links, config?.card_link_names, config?.room_names, config?.hidden_for, hiddenFor, hass.user?.id]);
+  }, [data, updateConfig, config?.card_links, config?.card_link_names, config?.room_names, config?.hidden_for, config?.entity_options, config?.names, hiddenFor, hass.user?.id]);
 
   useEffect(() => { pauseCameras("screensaver", saverOn); }, [saverOn]);
 

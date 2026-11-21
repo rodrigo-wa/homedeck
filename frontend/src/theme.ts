@@ -183,6 +183,8 @@ export const theme = String.raw`
 .app-shell .scene-strip { display: flex; gap: calc(var(--u)*1); flex-wrap: wrap; overflow: visible; }
 .app-shell .scene-strip .hd-item > button:first-child { display: inline-flex; align-items: center; gap: calc(var(--u)*.9); border-radius: var(--hd-pill,99px); padding: calc(var(--u)*1.1) calc(var(--u)*2.2); color: var(--ink); font: 600 calc(var(--u)*1.8)/1.2 var(--f-body); cursor: pointer; min-height: 0; }
 .app-shell .scene-strip .hd-item > button:first-child svg { width: calc(var(--u)*2.4); height: calc(var(--u)*2.4); }
+/* A scene that follows an entity lights up while it is on (Options of the button). */
+.app-shell .scene-strip .hd-item > button.scene-strip__lit { background: var(--on); color: var(--on-ink); border-color: transparent; }
 
 /* Navigation dock */
 .app-shell .navigation-dock {
@@ -203,6 +205,7 @@ export const theme = String.raw`
 .app-shell .room-workspace { display: grid; grid-template-columns: minmax(calc(var(--u)*22), calc(var(--u)*26)) minmax(0, 1fr); gap: calc(var(--u)*4); align-items: start; min-height: 0; }
 .app-shell .room-selector { position: sticky; top: calc(var(--u)*2); min-width: 0; padding: 0; background: none; border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .app-shell .room-selector__list { display: flex; flex-direction: column; gap: calc(var(--u)*.6); max-height: none; overflow: visible; padding: 0; }
+@media (pointer: fine) { .app-shell :is(.room-selector__list, .navigation-dock) { user-select: none; } }
 .app-shell .room-selector__list > button {
   display: flex; align-items: center; gap: calc(var(--u)*1.4); min-height: 0; width: 100%; border: 0; border-radius: calc(var(--u)*1.6*var(--hd-r,1));
   padding: calc(var(--u)*1.1) calc(var(--u)*1.2); background: none; color: var(--ink-2); font: 500 calc(var(--u)*1.9)/1.2 var(--f-body); text-align: left; cursor: pointer;
@@ -232,6 +235,9 @@ export const theme = String.raw`
   .app-shell .room-selector { position: static; }
   .app-shell .room-selector__list { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
   .app-shell .room-selector__list > button { width: auto; flex: none; }
+  /* Rooms by floor: each floor is its own row, its name first. */
+  .app-shell .room-selector__list + .room-selector__list { margin-top: calc(var(--u)*.8); }
+  .app-shell .room-selector__list > .room-selector__floor { flex: none; align-self: center; padding: 0 calc(var(--u)*.4) 0 calc(var(--u)*.2); writing-mode: horizontal-tb; }
   .app-shell .room-pane .device-grid, .app-shell .collection-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .app-shell .navigation-dock button { padding: calc(var(--u)*1.1) calc(var(--u)*1.6); }
 }

@@ -249,14 +249,14 @@ export function EntityEditSheet({ entityId, hass, linkable, onClose, roomScreen,
         <div><span className="eyebrow">{t("deviceOptions")}</span><EntityName entity={roomScreen ? { ...entity, room_screen: roomScreen } : entity} t={t} /><EntitySource entity={entity} t={t} /></div>
         <button aria-label={t("close")} className="hd-close" onClick={onClose} type="button"><HDIcon name="close" size={20} /></button>
       </header>
-      <DeviceOptions entity={entity} state={hass.states[entityId]} t={t} />
+      <DeviceOptions entity={entity} hass={hass} state={hass.states[entityId]} t={t} />
       {roomScreen === "room:__unassigned__" && customize && <MoveToRoom entityId={entityId} onMoved={onClose} t={t} />}
       <section className="room-options hd-detail__options">{linkable && !["camera", "media_player"].includes(entity.domain) && <CardLinksEditor itemKey={`entity:${entityId}`} ownId={entityId} t={t} />}<ConditionEditor entity={entity} hass={hass} t={t} /><AudienceEditor hass={hass} itemKey={`entity:${entityId}`} t={t} /></section>
     </section>
   </div>;
 }
 
-function DeviceOptions({ entity: opened, state, t }: { entity: DiscoveredEntity; state?: HassEntity; t: (key: TranslationKey) => string }) {
+function DeviceOptions({ entity: opened, hass, state, t }: { entity: DiscoveredEntity; hass: HomeAssistant; state?: HassEntity; t: (key: TranslationKey) => string }) {
   const customize = useCustomize();
   if (!customize) return null;
   const entity = customize.lookup(opened.entity_id) ?? opened;
@@ -277,10 +277,16 @@ function DeviceOptions({ entity: opened, state, t }: { entity: DiscoveredEntity;
       </IconChooser>
     </div>
     {!["sensor", "binary_sensor", "weather", "person", "calendar", "todo", "event"].includes(entity.domain) && <label className="hd-detail__confirm"><span><b>{t("childLockCard")}</b><small>{t("childLockCardDescription")}</small></span><input checked={Boolean(entity.child_lock)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { child_lock: event.target.checked })} type="checkbox" /></label>}
+    {["scene", "script"].includes(entity.domain) && <div className="hd-detail__confirm hd-detail__choice"><span><b>{t("sceneHighlight")}</b><small>{t("sceneHighlightDescription")}</small></span><HDSelect ariaLabel={t("sceneHighlight")} onChange={(id) => customize.setEntity(entity.entity_id, { highlight_entity: id || undefined })} options={[{ value: "", label: t("humidityNone") }, ...Object.values(hass.states).filter((item) => /^(light|switch|input_boolean|fan|media_player|climate|cover|lock|binary_sensor|person|alarm_control_panel|automation|script)\./.test(item.entity_id) && item.entity_id !== entity.entity_id).map((item) => ({ value: item.entity_id, label: String(item.attributes.friendly_name ?? item.entity_id) })).sort((a, b) => a.label.localeCompare(b.label))]} value={customize.lookup(entity.entity_id)?.highlight_entity ?? ""} /></div>}
+    {entity.domain === "media_player" && <PlayerOptions entity={entity} hass={hass} t={t} />}
+    {entity.domain === "sensor" && <div className="hd-detail__confirm hd-detail__choice"><span><b>{t("sensorPill")}</b><small>{t("sensorPillDescription")}</small></span>
+      <HDSegmented ariaLabel={t("noticeStyle")} onChange={(value) => customize.setEntity(entity.entity_id, { pill_style: value === "icon" || value === "text" ? value : undefined })} options={[{ value: "", label: t("noticeStyleBoth") }, { value: "icon", label: t("noticeStyleIcon") }, { value: "text", label: t("noticeStyleText") }]} value={customize.lookup(entity.entity_id)?.pill_style ?? ""} />
+      {customize.lookup(entity.entity_id)?.pill_style !== "icon" && <input aria-label={t("noticeText")} className="st-input st-input--framed hd-pill-text" defaultValue={customize.lookup(entity.entity_id)?.pill_text ?? ""} maxLength={40} onBlur={(event) => customize.setEntity(entity.entity_id, { pill_text: event.target.value.trim() || undefined })} placeholder={entity.name} />}
+    </div>}
     {switches && <label className="hd-detail__confirm"><span><b>{t("confirmToggle")}</b><small>{t("confirmToggleDescription")}</small></span><input checked={Boolean(entity.confirm)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { confirm: event.target.checked })} type="checkbox" /></label>}
     {colorLight && <label className="hd-detail__confirm"><span><b>{t("lightAccent")}</b><small>{t("lightAccentDescription")}</small></span><input checked={Boolean(entity.light_accent)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { light_accent: event.target.checked })} type="checkbox" /></label>}
     {entity.domain === "cover" && <div className="hd-detail__confirm hd-detail__choice"><span><b>{t("coverControl")}</b><small>{t("coverControlDescription")}</small></span><HDSegmented ariaLabel={t("coverControl")} onChange={(value) => customize.setEntity(entity.entity_id, { cover_control: value === "both" ? undefined : value as "buttons" | "slider" })} options={[{ value: "both", label: t("coverControlBoth") }, { value: "buttons", label: t("coverControlButtons") }, { value: "slider", label: t("coverControlSlider") }]} value={entity.cover_control ?? "both"} /></div>}
-    {entity.domain === "cover" && ([["cover_no_tap", "coverNoTap", "coverNoTapDescription"], ["cover_swap_buttons", "coverSwapButtons", "coverSwapButtonsDescription"], ["cover_invert_position", "coverInvertPosition", "coverInvertPositionDescription"], ["cover_invert_state", "coverInvertState", "coverInvertStateDescription"], ["cover_side_buttons", "coverSideButtons", "coverSideButtonsDescription"], ["cover_no_highlight", "coverNoHighlight", "coverNoHighlightDescription"]] as const).map(([flag, label, description]) => <label className="hd-detail__confirm" key={flag}><span><b>{t(label)}</b><small>{t(description)}</small></span><input checked={Boolean(entity[flag])} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { [flag]: event.target.checked })} type="checkbox" /></label>)}
+    {entity.domain === "cover" && ([["cover_no_tap", "coverNoTap", "coverNoTapDescription"], ["cover_swap_buttons", "coverSwapButtons", "coverSwapButtonsDescription"], ["cover_invert_position", "coverInvertPosition", "coverInvertPositionDescription"], ["cover_invert_state", "coverInvertState", "coverInvertStateDescription"], ["cover_side_buttons", "coverSideButtons", "coverSideButtonsDescription"], ["cover_no_highlight", "coverNoHighlight", "coverNoHighlightDescription"], ["cover_no_status", "coverNoStatus", "coverNoStatusDescription"]] as const).map(([flag, label, description]) => <label className="hd-detail__confirm" key={flag}><span><b>{t(label)}</b><small>{t(description)}</small></span><input checked={Boolean(entity[flag])} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { [flag]: event.target.checked })} type="checkbox" /></label>)}
     {entity.domain === "alarm_control_panel" && <label className="hd-detail__confirm"><span><b>{t("alarmButtons")}</b><small>{t("alarmButtonsDescription")}</small></span><input checked={Boolean(entity.alarm_buttons)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { alarm_buttons: event.target.checked })} type="checkbox" /></label>}
     {entity.domain === "camera" && <label className="hd-detail__confirm"><span><b>{t("cameraMjpeg")}</b><small>{t("cameraMjpegDescription")}</small></span><input checked={Boolean(entity.camera_mjpeg)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { camera_mjpeg: event.target.checked })} type="checkbox" /></label>}
     {isSecurityKind(entity, state)
@@ -451,4 +457,29 @@ export function CameraLive({ entity, hass, t }: { entity: DiscoveredEntity; hass
       <button aria-label={t("exitFullScreen")} className="hd-camera__full" onClick={() => setFull(false)} type="button"><HDIcon name="shrink" size={18} /></button>
     </div>, shell)}
   </div>;
+}
+
+const PLAYER_PARTS: Array<[string, TranslationKey]> = [["art", "playerArt"], ["track", "playerTrack"], ["modes", "playerModes"], ["volume", "playerVolume"], ["sources", "playerSources"], ["power", "playerPower"]];
+const BUTTON_DOMAINS = /^(script|scene|button|input_button|automation|switch|input_boolean|light|fan|media_player)\./;
+
+/** A media player's options: open as a window, which parts show, and its own buttons. */
+function PlayerOptions({ entity, hass, t }: { entity: DiscoveredEntity; hass: HomeAssistant; t: (key: TranslationKey) => string }) {
+  const customize = useCustomize()!;
+  const current = customize.lookup(entity.entity_id) ?? entity;
+  const hide = current.player_hide ?? [];
+  const buttons = current.player_buttons ?? [];
+  const nameOf = (id: string) => customize.lookup(id)?.name ?? String(hass.states[id]?.attributes.friendly_name ?? id);
+  const setButtons = (next: string[]) => customize.setEntity(entity.entity_id, { player_buttons: next.length ? next : undefined });
+  return <>
+    <label className="hd-detail__confirm"><span><b>{t("playerWindow")}</b><small>{t("playerWindowDescription")}</small></span><input checked={Boolean(current.player_window)} className="st-switch" onChange={(event) => customize.setEntity(entity.entity_id, { player_window: event.target.checked || undefined })} type="checkbox" /></label>
+    <div className="hd-detail__confirm hd-detail__choice"><span><b>{t("playerParts")}</b><small>{t("playerPartsDescription")}</small></span>
+      <div className="hd-player-parts">{PLAYER_PARTS.map(([part, label]) => <button aria-pressed={!hide.includes(part)} className="hd-pill" key={part} onClick={() => { const next = hide.includes(part) ? hide.filter((item) => item !== part) : [...hide, part]; customize.setEntity(entity.entity_id, { player_hide: next.length ? next : undefined }); }} type="button">{t(label)}</button>)}</div>
+    </div>
+    <div className="hd-detail__confirm hd-detail__choice"><span><b>{t("playerButtons")}</b><small>{t("playerButtonsDescription")}</small></span>
+      {buttons.length > 0 && <ul className="hd-player-buttons-edit">{buttons.map((id, index) => <li key={id}><span>{nameOf(id)}</span>
+        <button aria-label={t("moveUp")} disabled={index === 0} onClick={() => { const next = [...buttons]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; setButtons(next); }} type="button"><HDIcon name="chevron" size={14} /></button>
+        <button aria-label={t("playerRemoveButton")} onClick={() => setButtons(buttons.filter((item) => item !== id))} type="button"><HDIcon name="close" size={14} /></button></li>)}</ul>}
+      <HDSelect ariaLabel={t("playerAddButton")} onChange={(id) => { if (id && !buttons.includes(id)) setButtons([...buttons, id]); }} options={[{ value: "", label: t("playerAddButton") }, ...Object.values(hass.states).filter((item) => BUTTON_DOMAINS.test(item.entity_id) && item.entity_id !== entity.entity_id && !buttons.includes(item.entity_id)).map((item) => ({ value: item.entity_id, label: String(item.attributes.friendly_name ?? item.entity_id) })).sort((a, b) => a.label.localeCompare(b.label))]} value="" />
+    </div>
+  </>;
 }

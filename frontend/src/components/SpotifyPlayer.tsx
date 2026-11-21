@@ -6,7 +6,8 @@ import { MEDIA, formatTime, isSpotify, mediaCan, mediaSeconds, playerLabel, useP
 import { mediaSources } from "../devices";
 import type { DiscoveredEntity } from "../types/discovery";
 import type { HomeAssistant } from "../types/home-assistant";
-import { HDIcon } from "./HDIcon";
+import { useCustomize } from "../personalize";
+import { EntityIcon, HDIcon } from "./HDIcon";
 
 interface SpotifyPlayerProps {
   entity: DiscoveredEntity;
@@ -19,7 +20,11 @@ const REPEAT_NEXT: Record<string, string> = { off: "all", all: "one", one: "off"
 
 /** Full-screen player: blurred cover behind, large artwork, seek bar, transport, volume and devices.
  * For Spotify and every other media player; buttons follow what the player supports. */
-export function SpotifyPlayer({ entity, hass, onClose, t }: SpotifyPlayerProps) {
+export function SpotifyPlayer({ entity: given, hass, onClose, t }: SpotifyPlayerProps) {
+  // The player's own options (Edit mode → its card's options): window, parts left out, extra buttons.
+  const customize = useCustomize();
+  const entity = customize?.lookup(given.entity_id) ?? given;
+  const hide = new Set(entity.player_hide ?? []);
   const state = hass.states[entity.entity_id];
   const attrs = state?.attributes ?? {};
   const playing = state?.state === "playing";
@@ -60,17 +65,17 @@ export function SpotifyPlayer({ entity, hass, onClose, t }: SpotifyPlayerProps) 
   const shown = seek != null ? seek * duration : position;
   const art = picture ? { backgroundImage: `url("${picture.replaceAll('"', "%22")}")` } : undefined;
 
-  return <div aria-labelledby="hd-player-title" aria-modal="true" className="hd-player" role="dialog">
+  const player = <div aria-labelledby="hd-player-title" aria-modal="true" className={entity.player_window ? "hd-player hd-player--window" : "hd-player"} role="dialog">
     <div className="hd-player__bg"><i style={art} /></div>
     <button aria-label={t("close")} className="hd-close hd-player__close" onClick={onClose} type="button"><HDIcon name="close" size={20} /></button>
     <div className="hd-player__scroll"><div className="hd-player__wrap">
-      <div className={playing ? "hd-player__art" : "hd-player__art hd-player__art--paused"} style={art}>{!picture && <HDIcon name="note" size={56} />}</div>
+      {!hide.has("art") && <div className={playing ? "hd-player__art" : "hd-player__art hd-player__art--paused"} style={art}>{!picture && <HDIcon name="note" size={56} />}</div>}
       <div className="hd-player__head">
         <div className={spotify ? "hd-player__source" : "hd-player__source hd-player__source--other"}><HDIcon name="note" size={15} /><span>{attrs.source && String(attrs.source) !== label ? `${label} · ${String(attrs.source)}` : label}</span></div>
         <div className="hd-player__title" id="hd-player-title">{idle ? t("nothingPlaying") : String(attrs.media_title)}</div>
         <div className="hd-player__artist">{idle ? hint : [attrs.media_artist ?? attrs.media_series_title, attrs.media_album_name].filter(Boolean).join(" · ")}</div>
       </div>
-      {!idle && duration > 0 && <div className="hd-player__track">
+      {!idle && duration > 0 && !hide.has("track") && <div className="hd-player__track">
         {canSeek ? <div aria-label={t("trackPosition")} aria-valuemax={Math.round(duration)} aria-valuemin={0} aria-valuenow={Math.round(shown)} className={seek != null ? "hd-player__bar hd-player__bar--drag" : "hd-player__bar"}
           onKeyDown={(event) => { if (event.key === "ArrowRight" || event.key === "ArrowLeft") call("media_seek", { seek_position: Math.round(Math.max(0, Math.min(duration, position + (event.key === "ArrowRight" ? 10 : -10)))) }); }}
           onPointerCancel={() => setSeek(null)}
@@ -84,8 +89,8 @@ export function SpotifyPlayer({ entity, hass, onClose, t }: SpotifyPlayerProps) 
       </div>}
       <div className="hd-player__controls">
         <div className="hd-player__side">
-          {typeof attrs.shuffle === "boolean" && mediaCan(state, MEDIA.SHUFFLE) && <button aria-label={t("shuffle")} aria-pressed={attrs.shuffle} className={attrs.shuffle ? "hd-player__small hd-player__small--on" : "hd-player__small"} onClick={() => call("shuffle_set", { shuffle: !attrs.shuffle })} type="button"><HDIcon name="shuffle" size={20} /></button>}
-          {repeat && <button aria-label={`${t("repeat")}: ${t(`repeat_${repeat}`)}`} className={repeat !== "off" ? "hd-player__small hd-player__small--on" : "hd-player__small"} onClick={() => call("repeat_set", { repeat: REPEAT_NEXT[repeat] ?? "off" })} type="button"><HDIcon name={repeat === "one" ? "repeat1" : "repeat"} size={20} /></button>}
+          {!hide.has("modes") && typeof attrs.shuffle === "boolean" && mediaCan(state, MEDIA.SHUFFLE) && <button aria-label={t("shuffle")} aria-pressed={attrs.shuffle} className={attrs.shuffle ? "hd-player__small hd-player__small--on" : "hd-player__small"} onClick={() => call("shuffle_set", { shuffle: !attrs.shuffle })} type="button"><HDIcon name="shuffle" size={20} /></button>}
+          {!hide.has("modes") && repeat && <button aria-label={`${t("repeat")}: ${t(`repeat_${repeat}`)}`} className={repeat !== "off" ? "hd-player__small hd-player__small--on" : "hd-player__small"} onClick={() => call("repeat_set", { repeat: REPEAT_NEXT[repeat] ?? "off" })} type="button"><HDIcon name={repeat === "one" ? "repeat1" : "repeat"} size={20} /></button>}
         </div>
         <div className="hd-player__main">
           {!idle && mediaCan(state, MEDIA.PREVIOUS) && <button aria-label={t("previous")} onClick={() => call("media_previous_track")} type="button"><HDIcon name="prev" size={26} /></button>}
@@ -93,16 +98,47 @@ export function SpotifyPlayer({ entity, hass, onClose, t }: SpotifyPlayerProps) 
           {!idle && mediaCan(state, MEDIA.NEXT) && <button aria-label={t("next")} onClick={() => call("media_next_track")} type="button"><HDIcon name="next" size={26} /></button>}
         </div>
         <div className="hd-player__side hd-player__side--end">
-          {volumeButtons && !off && <div aria-label={t("volume")} className="hd-player__volume" role="group">
+          {volumeButtons && !off && !hide.has("volume") && <div aria-label={t("volume")} className="hd-player__volume" role="group">
             <button aria-label={t("volumeDown")} onClick={() => step(false)} type="button"><HDIcon name="minus" size={18} /></button>
             <button aria-label={t("volumeUp")} onClick={() => step(true)} type="button"><HDIcon name="plus" size={18} /></button>
           </div>}
-          {power && !off && <button aria-label={t("turnOff")} className="hd-player__small" onClick={() => call("turn_off")} type="button"><HDIcon name="power" size={20} /></button>}
+          {power && !off && !hide.has("power") && <button aria-label={t("turnOff")} className="hd-player__small" onClick={() => call("turn_off")} type="button"><HDIcon name="power" size={20} /></button>}
         </div>
       </div>
-      {sources.length > 1 && <div aria-label={t("playOn")} className="hd-player__devices" role="group">
+      {(entity.player_buttons?.length ?? 0) > 0 && <PlayerButtons hass={hass} ids={entity.player_buttons!} />}
+      {sources.length > 1 && !hide.has("sources") && <div aria-label={t("playOn")} className="hd-player__devices" role="group">
         {sources.map((source) => <button aria-pressed={source === attrs.source} key={source} onClick={() => call("select_source", { source })} type="button"><HDIcon name="speaker" size={17} /><span>{source}</span></button>)}
       </div>}
     </div></div>
   </div>;
+  // As a window: the same player in a framed box over a dimmed panel; a tap outside closes it.
+  return entity.player_window ? <div className="hd-player-window" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>{player}</div> : player;
+}
+
+const PRESS = new Set(["button", "input_button"]);
+const RUN = new Set(["script", "scene"]);
+const LIT = new Set(["on", "playing", "open"]);
+
+/** The player's own buttons: a picture (a radio station's logo) or an icon, and the name. Scripts and
+ * scenes run, buttons are pressed, automations are triggered and the rest switch on and off. */
+function PlayerButtons({ hass, ids }: { hass: HomeAssistant; ids: string[] }) {
+  const customize = useCustomize();
+  return <div className="hd-player__extras">{ids.filter((id) => hass.states[id]).map((id) => {
+    const state = hass.states[id]!;
+    const domain = id.split(".")[0];
+    const picture = typeof state.attributes.entity_picture === "string" ? state.attributes.entity_picture : "";
+    const known = customize?.lookup(id);
+    const name = known?.name ?? String(state.attributes.friendly_name ?? id);
+    const press = () => {
+      if (PRESS.has(domain)) void hass.callService(domain, "press", { entity_id: id });
+      else if (RUN.has(domain)) void hass.callService(domain, "turn_on", { entity_id: id });
+      else if (domain === "automation") void hass.callService("automation", "trigger", { entity_id: id });
+      else void hass.callService("homeassistant", "toggle", { entity_id: id });
+    };
+    const lit = !PRESS.has(domain) && !RUN.has(domain) && LIT.has(state.state);
+    return <button aria-pressed={lit} className={picture ? "hd-player__extra hd-player__extra--picture" : "hd-player__extra"} key={id} onClick={press} title={name} type="button">
+      {picture ? <i style={{ backgroundImage: `url("${picture.replaceAll('"', "%22")}")` }} /> : <EntityIcon entity={known ?? { domain, entity_id: id }} size={18} />}
+      <span>{name}</span>
+    </button>;
+  })}</div>;
 }

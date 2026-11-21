@@ -57,6 +57,8 @@ export interface ScreenLayout {
   added?: string[];
   /** Separators placed in the order, by key ("section:<id>") with their title. */
   sections?: Record<string, string>;
+  /** Separators that start folded outside Edit mode (none by default). */
+  sections_folded?: string[];
   /** List cards placed in the order (Pro), by key ("list:<id>"). */
   lists?: Record<string, HomeDeckEntityList>;
   /** Folder cards placed in the order (Pro), by key ("folder:<id>"). */
@@ -161,6 +163,8 @@ export interface HomeDeckConfig {
     show_presence: boolean;
     /** A bell in the header with Home Assistant's own notifications (off by default). */
     ha_notifications?: boolean;
+    /** A microphone in the header that opens Home Assistant's Assist (off by default). */
+    assist_button?: boolean;
     /** A sensor of the person's own for the home status (how many devices are on); empty for the light count. */
     status_sensor?: string;
     /** The people shown in the header (person entities); everyone when empty. */
@@ -230,6 +234,10 @@ export interface HomeDeckConfig {
     outdoor_temperature?: string;
     /** The same for the humidity. */
     outdoor_humidity?: string;
+    /** Wind speed from an own weather station, replacing the weather service's; none by default. */
+    outdoor_wind?: string;
+    /** Air pressure from an own weather station, replacing the weather service's; none by default. */
+    outdoor_pressure?: string;
     /** The next days shown beside the weather in the header: 0 (none, the default), 3 or 5. */
     header_days?: number;
   };
@@ -305,6 +313,18 @@ export interface HomeDeckEntityOptions {
   confirm?: boolean;
   /** Does nothing while the child lock is on (on the devices that use it). */
   child_lock?: boolean;
+  /** Scenes and scripts in the strip: the button lights up while this entity is on (none by default). */
+  highlight_entity?: string;
+  /** Sensors in a room's top strip: icon and value only, or value and name only (both by default). */
+  pill_style?: "icon" | "text";
+  /** Sensors in a room's top strip: the text shown instead of the name. */
+  pill_text?: string;
+  /** Media players: the player opens as a window over the panel instead of full screen. */
+  player_window?: boolean;
+  /** Media players: parts of the player and its card left out (art, track, modes, volume, sources, power). */
+  player_hide?: string[];
+  /** Media players: extra buttons in the player (scripts, scenes, switches, buttons...), in this order. */
+  player_buttons?: string[];
   /** While on, the card's highlight takes the color of the light. */
   light_accent?: boolean;
   /** Outside Edit mode, the card only shows while these rules are met. */
@@ -325,6 +345,8 @@ export interface HomeDeckEntityOptions {
   security_item?: boolean;
   /** Covers: the card never takes the highlighted look. */
   cover_no_highlight?: boolean;
+  /** Covers: no open/closed caption on the card (for covers that never report their state). */
+  cover_no_status?: boolean;
   /** Covers: "buttons" only or the position "slider" only; both when not set. */
   cover_control?: "buttons" | "slider";
   /** Alarm panels: arm and disarm buttons on the card and on Home's Security card. */

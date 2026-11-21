@@ -16,6 +16,12 @@ export interface DiscoveredEntity {
   confirm?: boolean;
   /** Does nothing while the child lock is on (on the devices that use it). */
   child_lock?: boolean;
+  highlight_entity?: string;
+  player_window?: boolean;
+  pill_style?: "icon" | "text";
+  pill_text?: string;
+  player_hide?: string[];
+  player_buttons?: string[];
   /** The card's highlight takes the color of the light while it is on. */
   light_accent?: boolean;
   /** The card only shows while these rules are met. */
@@ -34,6 +40,7 @@ export interface DiscoveredEntity {
   security_item?: boolean;
   /** Covers: the card never takes the highlighted look, open or closed. */
   cover_no_highlight?: boolean;
+  cover_no_status?: boolean;
   /** Covers: "buttons" only, the position "slider" only, or both (none set). */
   cover_control?: "buttons" | "slider";
   /** Alarm panels: arm and disarm buttons right on the card and on Home's Security card. */

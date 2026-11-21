@@ -840,7 +840,7 @@ h1, h2, p { margin: 0; }
 .widget-card__icon { position: absolute; right: 15px; top: 15px; color: rgba(255, 255, 255, 0.57); }
 .widget-card__label { color: rgba(255, 255, 255, 0.46); font-size: 9px; font-weight: 750; letter-spacing: 0.13em; text-transform: uppercase; }
 .widget-card strong { display: block; max-width: calc(100% - 35px); margin-top: 24px; overflow: hidden; font-size: 23px; font-weight: 560; letter-spacing: -0.035em; text-overflow: ellipsis; white-space: nowrap; }
-.widget-card p { margin-top: 4px; overflow: hidden; color: rgba(255, 255, 255, 0.5); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; }
+.widget-card p { margin-top: 4px; overflow: hidden; color: rgba(255, 255, 255, 0.5); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .widget-card > button { position: absolute; right: 14px; bottom: 14px; width: 36px; height: 36px; display: inline-grid; place-items: center; border: 0; border-radius: var(--hd-round,50%); color: #171827; background: #f6f1df; cursor: pointer; }
 
 .operational-section { scroll-margin-top: 20px; }
@@ -989,6 +989,9 @@ h1, h2, p { margin: 0; }
   position: relative;
   min-height: 100vh;
   overflow: hidden;
+  /* clip, where supported, cuts the same overflow without making the shell a scroll box, so the
+     Sidebar layout's column (position: sticky) stays put while the content scrolls. */
+  overflow: clip;
   isolation: isolate;
   background: var(--ambient-4);
   transition: background 1200ms ease;

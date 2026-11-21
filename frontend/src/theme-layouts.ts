@@ -87,6 +87,9 @@ export const themeLayouts = String.raw`
 .app-shell .sb-layout > .sb-side { grid-area: side; }
 .app-shell .sb-layout > .sb-main { grid-area: main; }
 .app-shell .sb-layout > .context-header--status { grid-area: status; justify-content: flex-end; height: auto; min-height: 0; }
+/* A narrow column with the forecast, notices and people wraps to a second line instead of slipping under the sidebar. */
+.app-shell .sb-layout > .context-header--status { min-width: 0; }
+.app-shell .sb-layout > .context-header--status .context-header__right { flex-wrap: wrap; justify-content: flex-end; row-gap: calc(var(--u)*1.2); min-width: 0; max-width: 100%; }
 .app-shell .sb-main__header { display: flex; justify-content: space-between; align-items: flex-end; gap: calc(var(--u)*2); flex-wrap: wrap; }
 .app-shell .sb-main__header h1 { margin: calc(var(--u)*.6) 0 0; font: 300 calc(var(--u)*5)/1.05 var(--f-display); }
 .app-shell .sb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--u)*20), 1fr)); grid-auto-rows: minmax(calc(var(--u)*17), auto); gap: calc(var(--u)*1.8); }

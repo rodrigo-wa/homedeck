@@ -285,13 +285,22 @@ export function FloorPlan(props: ScreenProps & { embedded?: boolean; onOpenRoom:
     keepView(next);
     return !value;
   });
+  // Edit mode keeps the plan flat, with its own zoom (wheel or pinch) and pan (drag the empty background once zoomed).
+  const [editView, setEditView] = useState<View>(VIEW_2D);
+  useEffect(() => { if (!editing) setEditView(VIEW_2D); }, [editing]);
   const resetView = () => { const next = threeD ? VIEW_3D : VIEW_2D; setView(next); keepView(next); };
   const changed = JSON.stringify(view) !== JSON.stringify(threeD ? VIEW_3D : VIEW_2D);
-  const gesture = useRef<{ pointers: Map<number, { x: number; y: number }>; start: View; startPointers: Array<{ x: number; y: number }>; pan?: boolean } | null>(null);
+  const gesture = useRef<{ pointers: Map<number, { x: number; y: number }>; start: View; startPointers: Array<{ x: number; y: number }>; pan?: boolean; edit?: boolean } | null>(null);
   const [moving, setMoving] = useState(false);
   const pointersOf = (map: Map<number, { x: number; y: number }>) => [...map.values()];
   const onStageDown = (event: ReactPointerEvent) => {
-    if (editing) return;
+    if (editing) {
+      // Rooms and devices stop their own presses; this is the empty background, which moves a zoomed plan.
+      if (editView.zoom <= 1.01) return;
+      try { (event.currentTarget as Element).setPointerCapture(event.pointerId); } catch { /* keeps working without capture */ }
+      gesture.current = { pointers: new Map([[event.pointerId, { x: event.clientX, y: event.clientY }]]), start: editView, startPointers: [{ x: event.clientX, y: event.clientY }], pan: true, edit: true };
+      return;
+    }
     try { (event.currentTarget as Element).setPointerCapture(event.pointerId); } catch { /* keeps working without capture */ }
     const pointers = gesture.current?.pointers ?? new Map<number, { x: number; y: number }>();
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -305,6 +314,7 @@ export function FloorPlan(props: ScreenProps & { embedded?: boolean; onOpenRoom:
     now.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     const points = pointersOf(now.pointers);
     const start = now.start;
+    if (now.edit) { const first = now.startPointers[0]; setEditView({ ...start, px: start.px + event.clientX - first.x, py: start.py + event.clientY - first.y }); return; }
     if (points.length >= 2 && now.startPointers.length >= 2) {
       // Two fingers: pinch to zoom, move together to pan.
       const gap = (list: Array<{ x: number; y: number }>) => Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y) || 1;
@@ -328,7 +338,7 @@ export function FloorPlan(props: ScreenProps & { embedded?: boolean; onOpenRoom:
     const now = gesture.current;
     if (!now) return;
     now.pointers.delete(event.pointerId);
-    if (now.pointers.size === 0) { gesture.current = null; setMoving(false); setView((current) => { keepView(current); return current; }); }
+    if (now.pointers.size === 0) { const wasEdit = now.edit; gesture.current = null; setMoving(false); if (!wasEdit) setView((current) => { keepView(current); return current; }); }
     else gesture.current = { pointers: now.pointers, start: view, startPointers: pointersOf(now.pointers) };
   };
   useEffect(() => {
@@ -336,8 +346,8 @@ export function FloorPlan(props: ScreenProps & { embedded?: boolean; onOpenRoom:
     if (!element) return;
     // The mouse wheel (or a trackpad pinch) zooms.
     const wheel = (event: WheelEvent) => {
-      if (editing) return;
       event.preventDefault();
+      if (editing) { setEditView((current) => { const zoom = clamp(current.zoom * Math.exp(-event.deltaY * 0.0015), 1, 3.5); return zoom <= 1.01 ? VIEW_2D : { ...current, zoom }; }); return; }
       setView((current) => { const next = { ...current, zoom: clamp(current.zoom * Math.exp(-event.deltaY * 0.0015), 0.6, 3.5) }; keepView(next); return next; });
     };
     element.addEventListener("wheel", wheel, { passive: false });
@@ -483,8 +493,10 @@ export function FloorPlan(props: ScreenProps & { embedded?: boolean; onOpenRoom:
     const down = upright ? COLS : ROWS;
     const toScreen = (r: Rect): Rect => upright ? { x: ROWS - r.y - r.h, y: r.x, w: r.h, h: r.w } : r;
     const fromScreen = (r: Rect): Rect => upright ? { x: r.y, y: ROWS - r.x - r.w, w: r.h, h: r.w } : r;
-    const dx = Math.round((event.clientX - start.startX) / unitX);
-    const dy = Math.round((event.clientY - start.startY) / unitY);
+    // Zoomed in while editing, a grid cell is that much larger on screen.
+    const scale = editing ? editView.zoom : 1;
+    const dx = Math.round((event.clientX - start.startX) / (unitX * scale));
+    const dy = Math.round((event.clientY - start.startY) / (unitY * scale));
     const seen = toScreen(start.rect);
     if (start.kind === "move") {
       // The room moves with its parts, kept whole inside the plan.
@@ -549,7 +561,7 @@ export function FloorPlan(props: ScreenProps & { embedded?: boolean; onOpenRoom:
   };
 
   const floorName = (key: string) => key === NO_FLOOR ? t("floorplanNoFloor") : floorNames[key]?.name ?? t("floorplan");
-  const shownView = editing ? VIEW_2D : view;
+  const shownView = editing ? editView : view;
   const body = <div className={`fp ${editing ? "fp--editing" : ""} ${upright ? "fp--upright" : ""} ${threeD && !editing ? "fp--3d" : ""} ${image ? "fp--image" : ""} ${moving ? "fp--moving" : ""}`} style={{ "--fp-rx": `${shownView.rx}deg`, "--fp-rz": `${shownView.rz}deg` } as CSSProperties}>
     <div className="fp-overlay">
     <div className="fp-bar">
@@ -589,7 +601,7 @@ export function FloorPlan(props: ScreenProps & { embedded?: boolean; onOpenRoom:
           if (!rect) return null;
           const parts = partsOf(room);
           const box = parts.length > 0 ? boundsOf([rect, ...parts]) : rect;
-          const devices = roomShown(config, room, props.allRooms).filter((entity) => editing || !isHidden(room.id, entity.entity_id)).slice(0, MAX_SPOTS);
+          const devices = roomShown(config, room, props.allRooms).filter((entity) => !isHidden(room.id, entity.entity_id)).slice(0, MAX_SPOTS);
           const lights = devices.filter((entity) => entity.domain === "light");
           const lit = lights.filter((entity) => hass.states[entity.entity_id]?.state === "on");
           const glow = lights.length === 0 ? 0 : lit.length / lights.length;
@@ -661,6 +673,12 @@ export function FloorPlan(props: ScreenProps & { embedded?: boolean; onOpenRoom:
       </div>}
       {!floor && <p className="hd-picker__empty">{t("floorplanEmpty")}</p>}
     </div>
+    {/* Edit mode: what was left off this floor's plan, in a list under it (in the rooms it took their space). */}
+    {editing && floor && (() => {
+      const off = floor.rooms.flatMap((room) => roomShown(config, room, props.allRooms).filter((entity) => isHidden(room.id, entity.entity_id)).map((entity) => ({ room, entity })));
+      return off.length > 0 && <div className="fp-hidden-list"><span className="eyebrow">{t("floorplanHiddenList")}</span><div>{off.map(({ room, entity }) =>
+        <button className="hd-pill" key={`${room.id}:${entity.entity_id}`} onClick={() => setHidden(room.id, entity.entity_id, false)} title={t("floorplanShowOnPlan")} type="button"><HDIcon name="plus" size={13} /><EntityIcon entity={entity} size={15} /><span>{entity.name}</span><small>{room.name}</small></button>)}</div></div>;
+    })()}
     {modal && <EntityModal entity={modal} hass={hass} language={language} onClose={() => setModal(null)} roomName={rooms.find((room) => room.entities.some((entity) => entity.entity_id === modal.entity_id))?.name} t={t} />}
   </div>;
 

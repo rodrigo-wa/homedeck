@@ -89,6 +89,27 @@ export const themeExtras = String.raw`
 .app-shell .hd-player__scroll { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; overflow: hidden auto; overscroll-behavior: contain; scrollbar-width: none; padding: calc(var(--u)*6 + env(safe-area-inset-top, 0px)) calc(var(--u)*4) calc(var(--u)*4 + env(safe-area-inset-bottom, 0px)); }
 .app-shell .hd-player__wrap { margin: auto 0; width: min(100%, calc(var(--u)*62)); display: flex; flex-direction: column; align-items: center; gap: calc(var(--u)*2.6); text-align: center; }
 .app-shell .hd-player__wrap > * { width: 100%; min-width: 0; }
+/* The player as a window (Options of the player's card): a framed box over the dimmed panel. */
+.app-shell .hd-player-window { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: calc(var(--u)*3); background: rgba(0,0,0,.45); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: hd-fade .2s ease; }
+.app-shell .hd-player.hd-player--window { position: relative; inset: auto; width: min(100%, 680px); height: min(100%, 820px); border-radius: calc(var(--u)*4*var(--hd-r,1)); box-shadow: 0 30px 90px rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.14); }
+.app-shell .hd-player--window .hd-player__close { top: calc(var(--u)*2.4); right: calc(var(--u)*2.4); }
+.app-shell .hd-player--window .hd-player__scroll { padding: calc(var(--u)*6) calc(var(--u)*3.4) calc(var(--u)*3.4); }
+.app-shell .hd-player--window .hd-player__art { width: min(calc(var(--hd-vh, 1vh)*28), 70%, 340px); }
+/* The player's own buttons: logos (radio stations) as tiles, the rest as pills. */
+.app-shell .hd-player__extras { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(var(--u)*1); }
+.app-shell .hd-player__extra { display: inline-flex; align-items: center; gap: calc(var(--u)*.8); padding: calc(var(--u)*1) calc(var(--u)*1.8); border-radius: var(--hd-pill,99px); border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.12); color: #fff; font: 600 calc(var(--u)*1.7)/1.1 var(--f-body); cursor: pointer; }
+.app-shell .hd-player__extra[aria-pressed="true"] { background: var(--on); color: var(--on-ink); border-color: transparent; }
+.app-shell .hd-player__extra--picture { flex-direction: column; padding: calc(var(--u)*.6); border-radius: calc(var(--u)*2*var(--hd-r,1)); width: calc(var(--u)*11); }
+.app-shell .hd-player__extra--picture i { width: 100%; aspect-ratio: 1; border-radius: calc(var(--u)*1.5*var(--hd-r,1)); background: center / cover no-repeat; }
+.app-shell .hd-player__extra--picture span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(var(--u)*1.4); }
+.app-shell .hd-player-parts { display: flex; flex-wrap: wrap; gap: calc(var(--u)*.8); margin-top: calc(var(--u)*1); }
+.app-shell .hd-player-parts .hd-pill[aria-pressed="false"] { opacity: .5; text-decoration: line-through; }
+.app-shell .hd-player-buttons-edit { list-style: none; margin: calc(var(--u)*1) 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--u)*.6); }
+.app-shell .hd-player-buttons-edit li { display: flex; align-items: center; gap: calc(var(--u)*.6); }
+.app-shell .hd-player-buttons-edit li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-shell .hd-player-buttons-edit li button { width: calc(var(--u)*3.6); height: calc(var(--u)*3.6); border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(255,255,255,.12); color: inherit; cursor: pointer; }
+.app-shell .hd-player-buttons-edit li button:first-of-type svg { transform: rotate(-90deg); }
+.app-shell .hd-player-buttons-edit li button:disabled { opacity: .3; cursor: default; }
 .app-shell .hd-player__art { width: min(calc(var(--hd-vh, 1vh)*34), 86vw, 560px); aspect-ratio: 1; border-radius: calc(var(--u)*3*var(--hd-r,1)); display: grid; place-items: center; color: rgba(255,255,255,.55); background: linear-gradient(135deg, #3a4d7a, #b5523f) center / cover no-repeat; box-shadow: 0 calc(var(--u)*3) calc(var(--u)*9) rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.12); transition: transform .45s cubic-bezier(.2,.8,.2,1); }
 .app-shell .hd-player__art--paused { transform: scale(.92); }
 .app-shell .hd-player__source { display: inline-flex; align-items: center; justify-content: center; gap: calc(var(--u)*.8); font: 700 calc(var(--u)*1.5)/1 var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.62); }
@@ -308,7 +329,7 @@ export const themeExtras = String.raw`
 .app-shell .widget-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--u)*.5); }
 .app-shell .widget-list button { width: 100%; display: flex; justify-content: space-between; gap: calc(var(--u)*1); padding: calc(var(--u)*.8) calc(var(--u)*1.2); border: 0; border-radius: calc(var(--u)*1.4*var(--hd-r,1)); background: color-mix(in srgb, currentColor 9%, transparent); color: inherit; font: 500 calc(var(--u)*1.6)/1.2 var(--f-body); cursor: pointer; text-align: left; }
 .app-shell .widget-list button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-shell .widget-list button small { flex: none; opacity: .65; text-transform: capitalize; }
+.app-shell .widget-list button small { flex: none; opacity: .65; }
 .app-shell .widget-list button.widget-list--alert { background: rgba(229,72,77,.22); }
 /* Today card: a dot in the calendar's color before each event, an empty ring before each reminder. */
 .app-shell .widget-list__dot { display: inline-block; width: calc(var(--u)*.9); height: calc(var(--u)*.9); margin-right: calc(var(--u)*.8); border-radius: var(--hd-round,50%); vertical-align: .1em; }
@@ -431,6 +452,7 @@ export const themeExtras = String.raw`
 .app-shell .hd-forecast > .eyebrow { margin-top: calc(var(--u)*.6); }
 .app-shell .hd-forecast__hours { display: flex; gap: calc(var(--u)*1); overflow-x: auto; scrollbar-width: none; padding-bottom: calc(var(--u)*.4); }
 .app-shell .hd-forecast__hours::-webkit-scrollbar { display: none; }
+@media (pointer: fine) { .app-shell .hd-forecast__hours { cursor: grab; user-select: none; } }
 .app-shell .hd-forecast__hours > div { flex: none; width: calc(var(--u)*8.5); display: flex; flex-direction: column; align-items: center; gap: calc(var(--u)*.6); padding: calc(var(--u)*1.2) calc(var(--u)*.4); border-radius: calc(var(--u)*2*var(--hd-r,1)); background: rgba(255,255,255,.08); }
 .app-shell .hd-forecast__hours small { color: var(--ink-2); font: 600 calc(var(--u)*1.5)/1 var(--f-body); }
 .app-shell .hd-forecast__hours b { font: 500 calc(var(--u)*2.2)/1 var(--f-display); }
@@ -933,7 +955,7 @@ export const themeExtras = String.raw`
 .app-shell.view-kids .hd-child-lock__ring { inset: calc(var(--kid-edge, 3px) * -1); background: conic-gradient(#ffd43b calc(var(--hold, 0) * 1turn), transparent 0); }
 .app-shell .hd-lock-note { position: fixed; z-index: 60; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: var(--hd-pill, 99px); background: rgba(20,18,16,.88); color: #fff; font: 600 14px/1.3 var(--f-body); box-shadow: 0 8px 28px rgba(0,0,0,.35); backdrop-filter: blur(10px); animation: hd-lock-note .25s ease; pointer-events: none; }
 @keyframes hd-lock-note { from { opacity: 0; transform: translate(-50%, -8px); } }
-.app-shell .device-tile__lock { position: absolute; z-index: 2; right: calc(var(--u)*1.2); top: calc(var(--u)*1.2); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.45); color: #fff; pointer-events: none; }
+.app-shell .device-tile__lock { position: absolute; z-index: 2; left: calc(var(--u)*3.9); top: calc(var(--u)*.7); display: grid; place-items: center; width: 22px; height: 22px; box-shadow: 0 0 0 2px rgba(0,0,0,.25); border-radius: 50%; background: rgba(0,0,0,.45); color: #fff; pointer-events: none; }
 .app-shell .device-tile:has(.device-tile__lock) > :not(.device-tile__lock) { opacity: .55; }
 
 /* Cover option "Buttons on the side": on a small tile the three buttons stack on the right, so the tile is as tall as the others. */
@@ -1383,7 +1405,7 @@ export const themeExtras = String.raw`
 .app-shell .hd-vehicle__art { position: relative; flex: none; width: calc(var(--u)*7.2); height: calc(var(--u)*7.2); min-width: 50px; min-height: 50px; display: grid; place-items: center; }
 .app-shell .hd-vehicle__ring { position: absolute; inset: 0; width: 100%; height: 100%; color: currentColor; }
 .app-shell .hd-vehicle__ring circle { transition: stroke-dasharray .8s ease; }
-.app-shell .hd-vehicle__icon { width: 64%; height: 64%; display: grid; place-items: center; border-radius: var(--hd-round, 50%); background: var(--vc); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--vc) 40%, transparent); }
+.app-shell .hd-vehicle__icon { width: 64%; height: 64%; display: grid; place-items: center; border-radius: var(--hd-round, 50%); background: var(--vc); color: var(--vc-ink, #fff); box-shadow: 0 0 0 1px var(--vc-edge, transparent), 0 4px 14px color-mix(in srgb, var(--vc) 40%, transparent); }
 .app-shell .hd-vehicle__bolt { position: absolute; right: -2px; bottom: -2px; width: 34%; height: 34%; display: grid; place-items: center; border-radius: 50%; background: #ffd60a; color: #2a2110; box-shadow: 0 0 0 2px rgba(0,0,0,.25); }
 .app-shell.hd-motion .hd-vehicle--charging .hd-vehicle__ring { animation: hd-vehicle-pulse 2.4s ease-in-out infinite; }
 @keyframes hd-vehicle-pulse { 50% { filter: drop-shadow(0 0 6px var(--vc)); } }
@@ -1476,4 +1498,6 @@ export const themeExtras = String.raw`
 .app-shell .st-textsize__preview { display: grid; grid-template-columns: repeat(2, calc(var(--u)*17)); gap: calc(var(--u)*1.2); pointer-events: none; }
 .app-shell .st-textsize__preview .device-tile { height: calc(var(--u)*15); min-height: 0; }
 @media (max-width: 720px) { .app-shell .st-textsize__body { grid-template-columns: minmax(0, 1fr); } .app-shell .st-textsize__preview { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* A cover button armed by "Ask before switching": a second tap on it acts. */
+.app-shell :is(.device-controls--cover, .tile-cover) button.is-confirming { background: var(--on); color: var(--on-ink); box-shadow: 0 0 0 2px color-mix(in srgb, var(--on) 45%, transparent); }
 `;

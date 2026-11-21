@@ -1,5 +1,6 @@
+import { dragScroll } from "../dragScroll";
 import { inRoom, isRoomLight } from "../personalize";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ContextHeader } from "../components/ContextHeader";
 import { EditableGrid } from "../components/EditableGrid";
 import { EntityCard } from "../components/EntityCard";
@@ -37,6 +38,7 @@ export function RoomScreen(props: ScreenProps & { onSelectRoom: (roomId: string)
   const byId = new Map([...room.entities, ...added.map((id) => everywhere.byId.get(id)!)].map((entity) => [entity.entity_id, inRoom(entity, screen, config.room_names?.[screen])]));
   const { visible, hidden } = arrange([...natural.map((entity) => entityKey(entity.entity_id)), ...added.map(entityKey)], layout, true);
   const setAdded = (ids: string[]) => onLayout(screen, { ...layout, added: ids });
+  const dragRooms = useMemo(() => dragScroll(), []);
   const groups = useFloorGroups(hass, data.rooms, Boolean(config.rooms_by_floor), t("floorplanNoFloor"));
 
   const setRoomLights = async (service: "turn_on" | "turn_off") => {
@@ -50,15 +52,16 @@ export function RoomScreen(props: ScreenProps & { onSelectRoom: (roomId: string)
       <ContextHeader config={config} hass={hass} language={language} onSettings={props.onSettings} t={t} />
       <div className="room-workspace">
         <aside className="room-selector" aria-label={t("roomsNavigation")}>
-          <div className="room-selector__list" role="tablist">
-            {groups.map((group) => [
+          {/* One bar per floor when rooms are grouped by floor (on a phone each floor is its own row). */}
+          {groups.map((group) => <div className="room-selector__list" key={`floor-${group.id}`} role="tablist" {...dragRooms}>
+            {[
               group.name != null && <span className="room-selector__floor" key={`floor-${group.id}`}>{group.name}</span>,
               ...group.rooms.map((item) => {
                 const count = item.entities.filter((entity) => isRoomLight(entity) && hass.states[entity.entity_id]?.state === "on").length;
                 return <button aria-selected={item.id === room.id} key={item.id} onClick={() => onSelectRoom(item.id)} role="tab" type="button"><span className="room-selector__icon"><RoomIcon room={item} size={19} /></span><span>{item.id === "__unassigned__" ? t("unassigned") : item.name}</span>{count > 0 && <i>{count}</i>}</button>;
               }),
-            ])}
-          </div>
+            ]}
+          </div>)}
         </aside>
 
         <section className="room-pane" key={room.id}>

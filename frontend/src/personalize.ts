@@ -25,7 +25,7 @@ export const isRoomLight = (entity: DiscoveredEntity) => entity.domain === "ligh
 
 /** The cover options copied onto each card (see HomeDeckEntityOptions). */
 /** On/off options copied onto the entity (covers, security, alarm and camera choices). */
-const COVER_FLAGS = ["cover_no_tap", "cover_swap_buttons", "cover_invert_position", "cover_invert_state", "cover_side_buttons", "cover_no_highlight", "security_item", "alarm_buttons", "camera_mjpeg"] as const;
+const COVER_FLAGS = ["cover_no_tap", "cover_swap_buttons", "cover_invert_position", "cover_invert_state", "cover_side_buttons", "cover_no_highlight", "cover_no_status", "security_item", "alarm_buttons", "camera_mjpeg"] as const;
 
 export function personalize(data: DiscoveryResponse, names: HomeDeckConfig["names"], rooms: HomeDeckConfig["rooms"] | undefined, entityOptions?: HomeDeckConfig["entity_options"], haIcons = false, layouts?: HomeDeckConfig["layouts"], haRoomIcons = false): DiscoveryResponse {
   const nicknames = names ?? {};
@@ -52,8 +52,8 @@ export function personalize(data: DiscoveryResponse, names: HomeDeckConfig["name
           // The tile's icon: the one chosen for this device, else Home Assistant's when that option is on.
           const icon = own.icon || (haIcons ? "ha" : undefined);
           const off = hidden.has(`entity:${entity.entity_id}`);
-          if (!nickname && !icon && !own.confirm && !own.child_lock && !own.light_accent && !own.visible_when && !own.not_security && !own.cover_control && !COVER_FLAGS.some((flag) => own[flag]) && !off) return entity;
-          return { ...entity, ...(nickname ? { name: nickname, original_name: entity.name } : {}), ...(icon ? { display_icon: icon } : {}), ...(own.confirm ? { confirm: true } : {}), ...(own.child_lock ? { child_lock: true } : {}), ...(own.light_accent ? { light_accent: true } : {}), ...(own.visible_when ? { visible_when: own.visible_when } : {}), ...(own.not_security ? { not_security: true } : {}), ...(own.cover_control === "buttons" || own.cover_control === "slider" ? { cover_control: own.cover_control } : {}), ...Object.fromEntries(COVER_FLAGS.filter((flag) => own[flag]).map((flag) => [flag, true])), ...(off ? { hidden: true } : {}) };
+          if (!nickname && !icon && !own.confirm && !own.child_lock && !own.highlight_entity && !own.player_window && !own.pill_style && !own.pill_text && !own.player_hide?.length && !own.player_buttons?.length && !own.light_accent && !own.visible_when && !own.not_security && !own.cover_control && !COVER_FLAGS.some((flag) => own[flag]) && !off) return entity;
+          return { ...entity, ...(nickname ? { name: nickname, original_name: entity.name } : {}), ...(icon ? { display_icon: icon } : {}), ...(own.confirm ? { confirm: true } : {}), ...(own.child_lock ? { child_lock: true } : {}), ...(own.highlight_entity ? { highlight_entity: own.highlight_entity } : {}), ...(own.player_window ? { player_window: true } : {}), ...(own.pill_style ? { pill_style: own.pill_style } : {}), ...(own.pill_text ? { pill_text: own.pill_text } : {}), ...(own.player_hide?.length ? { player_hide: own.player_hide } : {}), ...(own.player_buttons?.length ? { player_buttons: own.player_buttons } : {}), ...(own.light_accent ? { light_accent: true } : {}), ...(own.visible_when ? { visible_when: own.visible_when } : {}), ...(own.not_security ? { not_security: true } : {}), ...(own.cover_control === "buttons" || own.cover_control === "slider" ? { cover_control: own.cover_control } : {}), ...Object.fromEntries(COVER_FLAGS.filter((flag) => own[flag]).map((flag) => [flag, true])), ...(off ? { hidden: true } : {}) };
         }),
       };
     }),

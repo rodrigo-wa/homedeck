@@ -1,3 +1,4 @@
+import { useConfirmGate } from "../confirmGate";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { hvacLabel, type TranslationKey } from "../i18n";
@@ -178,14 +179,15 @@ function CoverControls({ entity, state, t, call }: WideProps & { call: Call }) {
   const flip = (value: number) => (entity.cover_invert_position ? 100 - value : value);
   const position = reported == null ? null : flip(reported);
   const canSet = position != null && Boolean(Number(state.attributes.supported_features) & COVER_SET_POSITION);
+  const gate = useConfirmGate(Boolean(entity.confirm));
   // The cover's choice in Card options: only the buttons, only the position, or both (the default).
   const control = entity.cover_control;
   return <div className="tile-wide__controls tile-cover">
-    {position != null && control !== "buttons" && <VerticalSlider disabled={!canSet} label={`${t("setPosition")}: ${entity.name}`} onCommit={(value) => call("cover", "set_cover_position", { position: flip(value) })} value={position} />}
+    {position != null && control !== "buttons" && <VerticalSlider disabled={!canSet} label={`${t("setPosition")}: ${entity.name}`} onCommit={(value) => gate.gate("position", () => call("cover", "set_cover_position", { position: flip(value) }))} value={position} />}
     {!(control === "slider" && canSet) && <div className="tile-buttons tile-buttons--vertical">
-      <button aria-label={t("openCover")} onClick={() => call("cover", coverMove(entity, "up"))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={18} /></span></button>
-      <button aria-label={t("stopCover")} onClick={() => call("cover", "stop_cover")} type="button"><HDIcon name="stop" size={14} /></button>
-      <button aria-label={t("closeCover")} onClick={() => call("cover", coverMove(entity, "down"))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={18} /></span></button>
+      <button aria-label={t("openCover")} className={gate.pending === "up" ? "is-confirming" : undefined} onClick={() => gate.gate("up", () => call("cover", coverMove(entity, "up")))} type="button"><span className="rotate-up"><HDIcon name="chevron" size={18} /></span></button>
+      <button aria-label={t("stopCover")} className={gate.pending === "stop" ? "is-confirming" : undefined} onClick={() => gate.gate("stop", () => call("cover", "stop_cover"))} type="button"><HDIcon name="stop" size={14} /></button>
+      <button aria-label={t("closeCover")} className={gate.pending === "down" ? "is-confirming" : undefined} onClick={() => gate.gate("down", () => call("cover", coverMove(entity, "down")))} type="button"><span className="rotate-down"><HDIcon name="chevron" size={18} /></span></button>
     </div>}
   </div>;
 }

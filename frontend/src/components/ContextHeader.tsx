@@ -1,3 +1,5 @@
+import { hasAssist, openAssist } from "../assist";
+import { dragScroll } from "../dragScroll";
 import { hourOptions } from "../clock";
 import { useCustomize } from "../personalize";
 import { HeaderBadges } from "./HeaderBadges";
@@ -89,6 +91,7 @@ export function ContextHeader({ config, hass, language, onSettings, part = "all"
             </button>
           )}
           {sidebarHidden(hass) && <button aria-label={t("openMenu")} className="round-action" onClick={(event) => openSidebar(event.currentTarget)} type="button"><HDIcon name="menu" size={19} /></button>}
+          {config.home.assist_button && hasAssist(hass) && <button aria-label={t("assistOpen")} className="round-action" onClick={(event) => openAssist(event.currentTarget)} title={t("assistOpen")} type="button"><HDIcon name="mic" size={19} /></button>}
           {config.home.ha_notifications && <NotificationBell hass={hass} language={language} shell={shell} t={t} />}
           <ChildLockButton t={t} />
           <button aria-label={t("settings")} className="round-action" onClick={onSettings} type="button"><HDIcon name="settings" size={19} /></button>
@@ -140,6 +143,7 @@ function ForecastBody({ condition, conditionLabel, daily, hourly, language, sunr
   condition?: string; conditionLabel: string; daily: WeatherForecast[]; hourly: WeatherForecast[]; language?: string;
   sunrise?: string; sunset?: string; t: (key: TranslationKey) => string; temperature?: number; weather?: WeatherNow;
 }) {
+  const dragHours = useMemo(() => dragScroll(), []);
   const time = new Intl.DateTimeFormat(language, { ...hourOptions(), hour: "2-digit", minute: "2-digit" });
   const hour = new Intl.DateTimeFormat(language, { ...hourOptions(), hour: "2-digit" });
   const weekday = new Intl.DateTimeFormat(language, { weekday: "short" });
@@ -170,7 +174,7 @@ function ForecastBody({ condition, conditionLabel, daily, hourly, language, sunr
     {facts.length > 0 && <div className="hd-forecast__facts">{facts.map((fact) => <span key={fact}>{fact}</span>)}</div>}
     {hourly.length > 0 && <>
       <span className="eyebrow">{t("nextHours")}</span>
-      <div className="hd-forecast__hours">{hourly.map((item, index) => {
+      <div className="hd-forecast__hours" {...dragHours}>{hourly.map((item, index) => {
         const chance = numeric(item.precipitation_probability);
         return <div key={item.datetime ?? index}>
           <small>{index === 0 ? t("now") : `${hour.format(new Date(item.datetime!)).replace(/\D+$/, "")}h`}</small>

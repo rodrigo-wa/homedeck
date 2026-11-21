@@ -136,7 +136,10 @@ export function EditableGrid({ addLabel, roomScreen, cameraGrid, className, edit
   useEffect(() => { if (!editing) { setSizing(null); setEditingEntity(null); setEditingRoom(null); setEditingList(null); } }, [editing]);
   useEffect(() => { if (!editing) setEditingVehicle(null); }, [editing]);
   const titles = sections ? layout.sections ?? {} : {};
-  const folded = useDevicePref(foldedSections);
+  const deviceFolded = useDevicePref(foldedSections);
+  // A separator can start folded (Edit mode, its chevron); a tap on this device flips it from there.
+  const startFolded = new Set(layout.sections_folded ?? []);
+  const isFolded = (key: string) => startFolded.has(key) !== deviceFolded.includes(key);
   // List cards (Pro) live where separators do; without Pro they stay saved but are not shown.
   const lists: Record<string, HomeDeckEntityList> = sections && hass && plan.pro ? layout.lists ?? {} : {};
   const setList = (key: string, list: HomeDeckEntityList) => onLayout({ ...layout, lists: { ...(layout.lists ?? {}), [key]: list } });
@@ -163,7 +166,7 @@ export function EditableGrid({ addLabel, roomScreen, cameraGrid, className, edit
     label: titles[key],
     removal: "remove",
     // Outside Edit mode a separator folds and unfolds what follows it (remembered on this device).
-    node: editing ? <SectionTitle onTitle={(title) => setTitle(key, title)} t={t} title={titles[key]} /> : <h2 className={`hd-section${folded.includes(key) ? " hd-section--folded" : ""}`}><button aria-expanded={!folded.includes(key)} className="hd-section__fold" onClick={() => setSectionFolded(key, !folded.includes(key))} type="button"><span>{titles[key]}</span><HDIcon name="chevron" size={15} /></button></h2>,
+    node: editing ? <SectionTitle folded={startFolded.has(key)} onFolded={(on) => onLayout({ ...layout, sections_folded: on ? [...startFolded, key] : [...startFolded].filter((item) => item !== key) })} onTitle={(title) => setTitle(key, title)} t={t} title={titles[key]} /> : <h2 className={`hd-section${isFolded(key) ? " hd-section--folded" : ""}`}><button aria-expanded={!isFolded(key)} className="hd-section__fold" onClick={() => setSectionFolded(key, !deviceFolded.includes(key))} type="button"><span>{titles[key]}</span><HDIcon name="chevron" size={15} /></button></h2>,
   })), ...Object.keys(lists).map((key): GridItem => ({
     key,
     label: lists[key].title,
@@ -435,7 +438,7 @@ export function EditableGrid({ addLabel, roomScreen, cameraGrid, className, edit
       : <div className={`hd-sections ${editing ? "hd-sections--editing" : ""}`} {...pointer}>
         {blocks.map((block, index) => <Fragment key={block.section ?? "start"}>
           {block.section && renderItem(block.section, 0)}
-          {(block.keys.length > 0 || index === blocks.length - 1) && !(block.section && !editing && folded.includes(block.section)) && <div className={gridFor(block.keys)} style={gridStyle}>
+          {(block.keys.length > 0 || index === blocks.length - 1) && !(block.section && !editing && isFolded(block.section)) && <div className={gridFor(block.keys)} style={gridStyle}>
             {block.keys.map(renderItem)}
             {index === blocks.length - 1 && addTiles}
           </div>}
@@ -454,13 +457,14 @@ export function EditableGrid({ addLabel, roomScreen, cameraGrid, className, edit
 }
 
 /** A separator's title in edit mode: typed freely, saved when the field is left or Enter is pressed. */
-function SectionTitle({ onTitle, t, title }: { onTitle: (title: string) => void; t: (key: TranslationKey) => string; title: string }) {
+function SectionTitle({ folded, onFolded, onTitle, t, title }: { folded: boolean; onFolded: (folded: boolean) => void; onTitle: (title: string) => void; t: (key: TranslationKey) => string; title: string }) {
   const [draft, setDraft] = useState(title);
   useEffect(() => setDraft(title), [title]);
   const commit = () => { if (draft.trim() !== title) onTitle(draft); };
   return <div className="hd-section hd-section--editing">
     <HDIcon name="grip" size={16} />
     <input aria-label={t("sectionTitle")} className="hd-section__input" maxLength={60} onBlur={commit} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} placeholder={t("newSection")} value={draft} />
+    <button aria-label={t("sectionStartFolded")} aria-pressed={folded} className={folded ? "hd-section__start hd-section__start--on" : "hd-section__start"} onClick={() => onFolded(!folded)} onPointerDown={(event) => event.stopPropagation()} title={t("sectionStartFolded")} type="button"><HDIcon name="chevron" size={14} /><span>{t("sectionStartFoldedShort")}</span></button>
   </div>;
 }
 

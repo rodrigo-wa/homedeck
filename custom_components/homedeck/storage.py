@@ -445,9 +445,26 @@ def _normalize_entity_options(value: Any) -> dict[str, dict[str, Any]]:
             clean["child_lock"] = True
         if options.get("light_accent") is True:
             clean["light_accent"] = True
-        for flag in ("not_security", "cover_no_tap", "cover_swap_buttons", "cover_invert_position", "cover_invert_state", "cover_side_buttons", "cover_no_highlight", "security_item", "alarm_buttons", "camera_mjpeg"):
+        for flag in ("not_security", "cover_no_tap", "cover_swap_buttons", "cover_invert_position", "cover_invert_state", "cover_side_buttons", "cover_no_highlight", "cover_no_status", "security_item", "alarm_buttons", "camera_mjpeg", "player_window"):
             if options.get(flag) is True:
                 clean[flag] = True
+        # Scenes and scripts in the strip: lit while this entity is on.
+        highlight = options.get("highlight_entity")
+        if isinstance(highlight, str) and _BADGE_ENTITY.match(highlight):
+            clean["highlight_entity"] = highlight
+        # Media players: parts of the player left out, and the player's own buttons.
+        hide = [part for part in _unique_strings(options.get("player_hide")) if part in ("art", "track", "modes", "volume", "sources", "power")]
+        if hide:
+            clean["player_hide"] = hide
+        buttons = [item for item in _unique_strings(options.get("player_buttons")) if _BADGE_ENTITY.match(item)][:24]
+        if buttons:
+            clean["player_buttons"] = buttons
+        # Sensors in a room's top strip: how they look and the text in place of the name.
+        if options.get("pill_style") in ("icon", "text"):
+            clean["pill_style"] = options["pill_style"]
+        pill_text = options.get("pill_text")
+        if isinstance(pill_text, str) and pill_text.strip():
+            clean["pill_text"] = pill_text.strip()[:40]
         if options.get("cover_control") in ("buttons", "slider"):
             clean["cover_control"] = options["cover_control"]
         when = _normalize_condition(options.get("visible_when"))
@@ -481,6 +498,10 @@ def _normalize_layout(layout: dict[str, Any], folders: bool = True) -> dict[str,
     sections = _normalize_sections(layout.get("sections"))
     if sections:
         clean["sections"] = sections
+        # Separators that start folded outside Edit mode.
+        folded = [key for key in _unique_strings(layout.get("sections_folded")) if key in sections]
+        if folded:
+            clean["sections_folded"] = folded
     lists = _normalize_lists(layout.get("lists"))
     if lists:
         clean["lists"] = lists
@@ -679,7 +700,7 @@ def normalize_config(value: Any) -> HomeDeckConfig:
 
     home = value.get("home")
     if isinstance(home, dict):
-        for key in ("show_clock", "show_weather", "show_presence", "ha_notifications"):
+        for key in ("show_clock", "show_weather", "show_presence", "ha_notifications", "assist_button"):
             if isinstance(home.get(key), bool):
                 config["home"][key] = home[key]
         # A sensor of the person's own for the home status (devices on), instead of the light count.
@@ -797,7 +818,7 @@ def normalize_config(value: Any) -> HomeDeckConfig:
         if weather.get("header_days") in (0, 3, 5):
             config["weather"]["header_days"] = weather["header_days"]
         # Optional outdoor sensors that replace the weather's own temperature and humidity.
-        for key in ("outdoor_temperature", "outdoor_humidity"):
+        for key in ("outdoor_temperature", "outdoor_humidity", "outdoor_wind", "outdoor_pressure"):
             sensor = weather.get(key)
             if isinstance(sensor, str) and sensor.startswith("sensor.") and len(sensor) <= _MAX_KEY_LENGTH:
                 config["weather"][key] = sensor

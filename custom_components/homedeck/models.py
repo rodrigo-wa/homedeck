@@ -18,6 +18,8 @@ class HomeDeckHeaderConfig(TypedDict):
     show_presence: bool
     # A bell in the header with Home Assistant's own notifications.
     ha_notifications: bool
+    # A microphone in the header that opens Home Assistant's Assist.
+    assist_button: bool
     # A sensor for the home status (devices on); empty for the built-in light count.
     status_sensor: str
     presence_people: list[str]
@@ -270,6 +272,7 @@ def default_config() -> HomeDeckConfig:
             "show_weather": True,
             "show_presence": True,
             "ha_notifications": False,
+            "assist_button": False,
             "status_sensor": "",
             "presence_people": [],
             "badges": [],

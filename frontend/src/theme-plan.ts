@@ -112,4 +112,8 @@ export const themePlan = String.raw`
 .app-shell .st-love__head p { margin: calc(var(--u)*.4) 0 0; color: var(--ink-2); font: 500 calc(var(--u)*1.7)/1.4 var(--f-body); }
 .app-shell .st-love__links { display: flex; flex-wrap: wrap; gap: calc(var(--u)*1); }
 .app-shell .st-love__links .hd-pill { text-decoration: none; }
+.app-shell .fp-hidden-list { display: flex; flex-direction: column; gap: calc(var(--u)*.8); padding: calc(var(--u)*1.2) 0 0; }
+.app-shell .fp-hidden-list > div { display: flex; flex-wrap: wrap; gap: calc(var(--u)*.8); }
+.app-shell .fp-hidden-list .hd-pill { opacity: .8; }
+.app-shell .fp-hidden-list .hd-pill small { opacity: .6; font-weight: 500; }
 `;

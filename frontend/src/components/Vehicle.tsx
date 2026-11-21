@@ -21,7 +21,14 @@ import { PageIconButton } from "./RoomOptions";
 type T = (key: TranslationKey) => string;
 type Found = Partial<Record<VehicleSlot, string>>;
 
-export const VEHICLE_COLORS = ["#4f8cff", "#34c759", "#ff9f0a", "#ff375f", "#bf5af2", "#64d2ff", "#ffd60a", "#8e8e93"];
+export const VEHICLE_COLORS = ["#4f8cff", "#34c759", "#ff9f0a", "#ff375f", "#bf5af2", "#64d2ff", "#ffd60a", "#8e8e93", "#f2f2f7", "#1c1c1e"];
+/** The card's colors for a vehicle: white gets a dark icon, black a light edge and ring so it shows on dark cards. */
+export function vehicleStyle(color = VEHICLE_COLORS[0]): CSSProperties {
+  const hex = color.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) || 0);
+  const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return { "--vc": color, ...(luma > 0.75 ? { "--vc-ink": "#1c1c1e" } : {}), ...(luma < 0.2 ? { "--vc-edge": "rgba(255,255,255,.45)", "--vc-ring": "#d1d1d6" } : {}) } as CSSProperties;
+}
 const KIND_ICON: Record<VehicleKind, IconName> = { ev: "car", phev: "car", fuel: "car", moto: "bike" };
 
 const text = (hass: HomeAssistant, id: string) => `${id} ${String(hass.states[id]?.attributes.friendly_name ?? "")}`.toLowerCase();
@@ -94,6 +101,7 @@ interface VehicleStatus {
   place: string | null;
   home: boolean;
   locked: boolean | null;
+  odometer: string | null;
 }
 
 function vehicleStatus(hass: HomeAssistant, vehicle: HomeDeckVehicle, slots: Found, language: string | undefined, t: T): VehicleStatus {
@@ -134,8 +142,10 @@ function vehicleStatus(hass: HomeAssistant, vehicle: HomeDeckVehicle, slots: Fou
   const home = tracker?.state === "home";
   const place = !tracker || ["unknown", "unavailable"].includes(tracker.state) ? null : home ? t("vehicleHome") : tracker.state === "not_home" ? t("vehicleAway") : tracker.state;
   const lockState = get("lock");
-  const locked = lockState ? lockState.state === "locked" : null;
-  return { level, levelKind, charging, plugged, full, power: kw != null && kw > 0.05 ? `${format(kw, 1)} kW` : null, time, range, place, home, locked };
+  const locked = !lockState || ["unknown", "unavailable"].includes(lockState.state) ? null : domain(slots.lock ?? "") === "binary_sensor" ? lockState.state === "off" : lockState.state === "locked";
+  const odometerState = get("odometer");
+  const odometer = number(odometerState) != null ? `${format(number(odometerState)!, 0)} ${String(odometerState?.attributes.unit_of_measurement ?? "km")}` : null;
+  return { level, levelKind, charging, plugged, full, power: kw != null && kw > 0.05 ? `${format(kw, 1)} kW` : null, time, range, place, home, locked, odometer };
 }
 
 /** One line on what the vehicle is doing now. */
@@ -150,7 +160,7 @@ function Ring({ charging, level, size }: { charging: boolean; level: number | nu
   const radius = 42;
   const length = 2 * Math.PI * radius;
   const value = level == null ? 0 : Math.max(0, Math.min(100, level));
-  const tone = level == null ? "var(--vc)" : value <= 15 ? "#ff453a" : value <= 30 ? "#ff9f0a" : "var(--vc)";
+  const tone = level == null ? "var(--vc-ring, var(--vc))" : value <= 15 ? "#ff453a" : value <= 30 ? "#ff9f0a" : "var(--vc-ring, var(--vc))";
   return <svg aria-hidden="true" className={`hd-vehicle__ring${charging ? " hd-vehicle__ring--charging" : ""}`} height={size} viewBox="0 0 100 100" width={size}>
     <circle cx="50" cy="50" fill="none" r={radius} stroke="currentColor" strokeOpacity=".16" strokeWidth="8" />
     <circle cx="50" cy="50" fill="none" r={radius} stroke={tone} strokeDasharray={`${(value / 100) * length} ${length}`} strokeLinecap="round" strokeWidth="8" transform="rotate(-90 50 50)" />
@@ -170,14 +180,13 @@ export function VehicleCard({ editing, hass, language, t, vehicle }: { editing: 
   const { slots } = vehicleEntities(hass, vehicle);
   const status = vehicleStatus(hass, vehicle, slots, language, t);
   const line = statusLine(status, t);
-  const style = { "--vc": vehicle.color ?? VEHICLE_COLORS[0] } as CSSProperties;
-  const chips: Array<[IconName, string]> = [
-    ...(status.range ? [["pin", status.range] as [IconName, string]] : []),
-    ...(status.charging && status.power ? [["bolt", status.power] as [IconName, string]] : []),
-    ...(status.charging && status.time ? [["clock", status.time] as [IconName, string]] : []),
-    ...(status.place ? [["home", status.place] as [IconName, string]] : []),
-    ...(status.locked != null ? [[status.locked ? "lock" : "unlock", status.locked ? t("vehicleLocked") : t("vehicleUnlocked")] as [IconName, string]] : []),
-  ];
+  const style = vehicleStyle(vehicle.color);
+  // The chips never repeat what the status line already says (range and place when parked, power and time when charging).
+  const said = new Set(status.charging ? [status.power, status.time] : status.plugged ? [] : [status.place, status.range]);
+  const chips: Array<[IconName, string]> = ([
+    ["pin", status.range], ["bolt", status.charging ? status.power : null], ["clock", status.charging ? status.time : null], ["home", status.place], ["car", status.odometer],
+    [status.locked ? "lock" : "unlock", status.locked == null ? null : status.locked ? t("vehicleLocked") : t("vehicleUnlocked")],
+  ] as Array<[IconName, string | null]>).filter((chip): chip is [IconName, string] => Boolean(chip[1]) && !said.has(chip[1]));
   return <>
     <button aria-label={vehicle.name || t("vehicle")} className={`device-tile hd-vehicle${wide ? " hd-vehicle--wide" : ""}${tall ? " hd-vehicle--tall" : ""}${status.charging ? " hd-vehicle--charging" : ""}`} onClick={() => { if (!editing) setOpen(true); }} ref={button} style={style} type="button">
       <span className="hd-vehicle__art">
@@ -187,7 +196,7 @@ export function VehicleCard({ editing, hass, language, t, vehicle }: { editing: 
       </span>
       <span className="hd-vehicle__copy">
         <strong>{vehicle.name || t("vehicle")}</strong>
-        <span className="hd-vehicle__level">{status.level != null ? `${Math.round(status.level)}%` : "—"}{status.levelKind === "fuel" ? ` ${t("vehicleFuel").toLowerCase()}` : ""}</span>
+        <span className="hd-vehicle__level">{status.level != null ? `${Math.round(status.level)}%` : "—"}{status.levelKind === "fuel" && status.level != null ? ` ${t("vehicleFuel").toLowerCase()}` : ""}</span>
         {line && <span className="hd-vehicle__status">{line}</span>}
         {wide && chips.length > 0 && <span className="hd-vehicle__chips">{chips.map(([icon, label]) => <span key={`${icon}${label}`}><HDIcon name={icon} size={13} />{label}</span>)}</span>}
       </span>
@@ -216,17 +225,20 @@ function VehicleDetails({ hass, language, onClose, slots, status, t, vehicle }: 
     if (slot === "location") return status.place ?? state.state;
     if (slot === "charging") return status.charging ? t("vehicleCharging") : status.full ? t("vehicleFull") : status.plugged ? t("vehiclePlugged") : t("vehicleNotCharging");
     if (slot === "time") return status.time ?? "—";
+    // A lock sensor (binary_sensor) is on when unlocked.
+    if (slot === "lock" && domain(id) === "binary_sensor" && ["on", "off"].includes(state.state)) return t(state.state === "off" ? "vehicleLocked" : "vehicleUnlocked");
     if (["lock", "climate", "charge_switch", "plug"].includes(slot)) return state.state === "on" || state.state === "locked" ? t(slot === "lock" ? "vehicleLocked" : "on") : state.state === "unlocked" ? t("vehicleUnlocked") : t(state.state === "off" ? "off" : "unknown");
     const value = number(state);
     return value == null ? state.state : `${new Intl.NumberFormat(language, { maximumFractionDigits: 1 }).format(value)} ${String(state.attributes.unit_of_measurement ?? "")}`.trim();
   };
   const call = (service: string, id: string, data: Record<string, unknown> = {}) => void hass.callService(domain(id), service, { entity_id: id, ...data }).catch(() => undefined);
   const controls: ReactNode[] = [];
-  if (slots.charge_switch) { const on = hass.states[slots.charge_switch]?.state === "on"; controls.push(<button className={`hd-pill${on ? " hd-pill--on" : ""}`} key="charge" onClick={() => call(on ? "turn_off" : "turn_on", slots.charge_switch!)} type="button"><HDIcon name="bolt" size={16} />{on ? t("vehicleStopCharging") : t("vehicleStartCharging")}</button>); }
-  if (slots.lock) { const locked = hass.states[slots.lock]?.state === "locked"; controls.push(<button className="hd-pill" key="lock" onClick={() => call(locked ? "unlock" : "lock", slots.lock!)} type="button"><HDIcon name={locked ? "unlock" : "lock"} size={16} />{locked ? t("unlock") : t("lock")}</button>); }
+  // The button says what a tap will do: while the car charges (or the switch is on) it stops charging.
+  if (slots.charge_switch) { const on = status.charging || hass.states[slots.charge_switch]?.state === "on"; controls.push(<button className={`hd-pill${on ? " hd-pill--on" : ""}`} key="charge" onClick={() => call(on ? "turn_off" : "turn_on", slots.charge_switch!)} type="button"><HDIcon name="bolt" size={16} />{on ? t("vehicleStopCharging") : t("vehicleStartCharging")}</button>); }
+  if (slots.lock && domain(slots.lock) === "lock") { const locked = hass.states[slots.lock]?.state === "locked"; controls.push(<button className="hd-pill" key="lock" onClick={() => call(locked ? "unlock" : "lock", slots.lock!)} type="button"><HDIcon name={locked ? "unlock" : "lock"} size={16} />{locked ? t("unlock") : t("lock")}</button>); }
   if (slots.climate) { const off = hass.states[slots.climate]?.state === "off"; controls.push(<button className={`hd-pill${off ? "" : " hd-pill--on"}`} key="climate" onClick={() => call(off ? "turn_on" : "turn_off", slots.climate!)} type="button"><HDIcon name="climate" size={16} />{off ? t("vehicleClimateOn") : t("vehicleClimateOff")}</button>); }
   return <div aria-label={vehicle.name} aria-modal="true" className="hd-sheet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} role="dialog">
-    <section className="hd-sheet hd-vehicle-sheet" style={{ "--vc": vehicle.color ?? VEHICLE_COLORS[0] } as CSSProperties}>
+    <section className="hd-sheet hd-vehicle-sheet" style={vehicleStyle(vehicle.color)}>
       <header className="hd-sheet__header"><h2>{vehicle.name || t("vehicle")}</h2><button className="hd-sheet__close" onClick={onClose} type="button">{t("close")}</button></header>
       <div className="hd-vehicle-sheet__hero">
         <span className="hd-vehicle__art"><Ring charging={status.charging} level={status.level} size={132} /><span className="hd-vehicle__icon"><HDIcon name={iconOf(vehicle)} size={36} /></span></span>
@@ -263,7 +275,7 @@ function deviceOptions(hass: HomeAssistant, charger: boolean): Array<{ value: st
 function slotOptions(hass: HomeAssistant, slot: VehicleSlot, own: string[]): string[] {
   const domains: Record<VehicleSlot, string[]> = {
     battery: ["sensor"], fuel: ["sensor"], range: ["sensor"], odometer: ["sensor"], power: ["sensor"], time: ["sensor"],
-    charging: ["binary_sensor", "sensor"], plug: ["binary_sensor"], location: ["device_tracker", "person"], lock: ["lock"], climate: ["climate", "switch"], charge_switch: ["switch", "input_boolean"],
+    charging: ["binary_sensor", "sensor"], plug: ["binary_sensor"], location: ["device_tracker", "person"], lock: ["lock", "binary_sensor"], climate: ["climate", "switch"], charge_switch: ["switch", "input_boolean"],
   };
   const ids = Object.keys(hass.states).filter((id) => domains[slot].includes(domain(id)));
   const mine = new Set(own);

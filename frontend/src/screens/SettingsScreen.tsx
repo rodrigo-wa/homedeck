@@ -30,7 +30,7 @@ import { EntityPicker } from "../components/EntityPicker";
 import { FeedbackSheet } from "../components/FeedbackSheet";
 import { LayoutPicker, Thumb as LayoutThumb, VIEW_MODES } from "../components/LayoutPicker";
 import { OPEN_METEO } from "../weather";
-import { DEFAULT_ACCENT, DEFAULT_CARDS, DEFAULT_HIGHLIGHT, FREE_BACKGROUNDS, FREE_VIEW_MODES, freeDevices, freeRoomIds, freeUsage, isControllable, panelRoomIds, DESKTOP_URL, SUPPORT_EMAIL, usePlan } from "../plan";
+import { DEFAULT_ACCENT, DEFAULT_CARDS, DEFAULT_HIGHLIGHT, FREE_BACKGROUNDS, FREE_VIEW_MODES, freeDevices, freeRoomIds, freeUsage, isControllable, panelRoomIds, desktopUrl, SUPPORT_EMAIL, usePlan } from "../plan";
 import { availableSections } from "../security";
 
 type Section = "layout" | "appearance" | "home" | "weather" | "agenda" | "cameras" | "screensaver" | "rooms" | "navigation" | "device" | "plan" | "system";
@@ -302,6 +302,7 @@ export function SettingsScreen({ config, hass, language, onClose, onDraft, onLic
             <Row label={t("showWeather")}><Switch checked={draft.home.show_weather} label={t("showWeather")} onChange={(show_weather) => update({ home: { ...draft.home, show_weather } })} /></Row>
             <Row label={t("showPresence")}><Switch checked={draft.home.show_presence} label={t("showPresence")} onChange={(show_presence) => update({ home: { ...draft.home, show_presence } })} /></Row>
             {draft.home.show_presence && <PresencePeople chosen={draft.home.presence_people ?? []} hass={hass} onChange={(presence_people) => update({ home: { ...draft.home, presence_people } })} t={t} />}
+            <Row description={t("assistButtonDescription")} label={t("assistButton")}><Switch checked={Boolean(draft.home.assist_button)} label={t("assistButton")} onChange={(assist_button) => update({ home: { ...draft.home, assist_button } })} /></Row>
             <Row description={t("haNotificationsDescription")} label={t("haNotificationsSetting")}><Switch checked={Boolean(draft.home.ha_notifications)} label={t("haNotificationsSetting")} onChange={(ha_notifications) => update({ home: { ...draft.home, ha_notifications } })} /></Row>
           </section>
           <NoticesPanel hass={hass} home={draft.home} language={language} onChange={(patch) => update({ home: { ...draft.home, ...patch } })} t={t} />
@@ -321,7 +322,7 @@ export function SettingsScreen({ config, hass, language, onClose, onDraft, onLic
             <h2>{t("weatherForecast")}</h2><p>{t("weatherSourceDescription")}</p>
             <Row label={t("weatherSource")}><HDSelect ariaLabel={t("weatherSource")} onChange={(entity_id) => update({ weather: { ...draft.weather, entity_id } })} options={[{ value: "auto", label: t("automatic") }, { value: OPEN_METEO, label: t("openMeteoSource") }, ...weatherEntities.map((entity) => ({ value: entity.entity_id, label: `${String(entity.attributes.friendly_name ?? entity.entity_id)}${["unknown", "unavailable"].includes(entity.state) ? ` · ${t("unavailable")}` : ""}` }))]} value={draft.weather.entity_id === OPEN_METEO || weatherEntities.some((entity) => entity.entity_id === draft.weather.entity_id) ? draft.weather.entity_id : "auto"} /></Row>
             <Row description={t("headerDaysDescription")} label={t("headerDays")}><HDSegmented ariaLabel={t("headerDays")} onChange={(days) => update({ weather: { ...draft.weather, header_days: Number(days) } })} options={[{ value: "0", label: t("humidityNone") }, { value: "3", label: "3" }, { value: "5", label: "5" }]} value={String(draft.weather.header_days ?? 0)} /></Row>
-            {([["outdoor_temperature", "outdoorTemperature", "temperature"], ["outdoor_humidity", "outdoorHumidity", "humidity"]] as const).map(([key, label, kind]) => <Row description={t(`${label}Description`)} key={key} label={t(label)}><HDSelect ariaLabel={t(label)} onChange={(sensor) => update({ weather: { ...draft.weather, [key]: sensor || undefined } })} options={[{ value: "", label: t("outdoorFromWeather") }, ...Object.values(hass.states).filter((state) => state.entity_id.startsWith("sensor.") && state.attributes.device_class === kind).sort((a, b) => Number(/outdoor|outside|extern|exterior|esterno|aussen|außen|rua|quintal/i.test(`${b.entity_id} ${b.attributes.friendly_name ?? ""}`)) - Number(/outdoor|outside|extern|exterior|esterno|aussen|außen|rua|quintal/i.test(`${a.entity_id} ${a.attributes.friendly_name ?? ""}`)) || String(a.attributes.friendly_name ?? a.entity_id).localeCompare(String(b.attributes.friendly_name ?? b.entity_id))).map((state) => ({ value: state.entity_id, label: String(state.attributes.friendly_name ?? state.entity_id) }))]} value={draft.weather[key] ?? ""} /></Row>)}
+            {([["outdoor_temperature", "outdoorTemperature", "temperature"], ["outdoor_humidity", "outdoorHumidity", "humidity"], ["outdoor_wind", "outdoorWind", "wind_speed"], ["outdoor_pressure", "outdoorPressure", "pressure"]] as const).map(([key, label, kind]) => <Row description={t(`${label}Description`)} key={key} label={t(label)}><HDSelect ariaLabel={t(label)} onChange={(sensor) => update({ weather: { ...draft.weather, [key]: sensor || undefined } })} options={[{ value: "", label: t("outdoorFromWeather") }, ...Object.values(hass.states).filter((state) => state.entity_id.startsWith("sensor.") && (kind === "pressure" ? ["pressure", "atmospheric_pressure"].includes(String(state.attributes.device_class)) : state.attributes.device_class === kind)).sort((a, b) => Number(/outdoor|outside|extern|exterior|esterno|aussen|außen|rua|quintal/i.test(`${b.entity_id} ${b.attributes.friendly_name ?? ""}`)) - Number(/outdoor|outside|extern|exterior|esterno|aussen|außen|rua|quintal/i.test(`${a.entity_id} ${a.attributes.friendly_name ?? ""}`)) || String(a.attributes.friendly_name ?? a.entity_id).localeCompare(String(b.attributes.friendly_name ?? b.entity_id))).map((state) => ({ value: state.entity_id, label: String(state.attributes.friendly_name ?? state.entity_id) }))]} value={draft.weather[key] ?? ""} /></Row>)}
           </section>}
 
         {section === "agenda" && <>
@@ -450,7 +451,7 @@ export function SettingsScreen({ config, hass, language, onClose, onDraft, onLic
             <div><h2>{t("desktopTitle")}</h2><p>{t("desktopText")}{plan.pro ? "" : ` ${t("desktopProNote")}`}</p></div>
           </div>
           <div className="st-love__links">
-            <a className="hd-pill hd-pill--solid" href={DESKTOP_URL} rel="noopener" target="_blank"><HDIcon name="monitor" size={16} />{t("desktopDownload")}</a>
+            <a className="hd-pill hd-pill--solid" href={desktopUrl(language)} rel="noopener" target="_blank"><HDIcon name="monitor" size={16} />{t("desktopDownload")}</a>
           </div>
         </section>}
 

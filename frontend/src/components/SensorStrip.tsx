@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { arrange, entityKey, getLayout, keyId, setHidden } from "../layout";
 import { usePlan } from "../plan";
 import type { ScreenProps } from "../screens/types";
@@ -37,6 +38,8 @@ export function SensorStrip({ props, room }: { props: ScreenProps; room: Room })
   const screen = roomSensorsScreen(room.id);
   const [picking, setPicking] = useState(false);
   const [opened, setOpened] = useState<DiscoveredEntity | null>(null);
+  const [shell, setShell] = useState<Element | null>(null);
+  const placed = useCallback((node: HTMLElement | null) => { if (node) setShell(node.closest(".app-shell")); }, []);
   const plan = usePlan();
   const everywhere = useMemo(() => entityIndex(props.catalogRooms), [props.catalogRooms]);
   const layout = getLayout(config, screen);
@@ -58,8 +61,9 @@ export function SensorStrip({ props, room }: { props: ScreenProps; room: Room })
 
   if (shown.length === 0 && !editing) return null;
   return (
-    <section className="scene-section sensor-section--room">
-      <div className="operational-heading"><span>{t("roomSensorsHeading")}</span><i>{shown.length}</i></div>
+    <section className="scene-section sensor-section--room" ref={placed}>
+      {/* The room's name already says where these are: the heading only shows while editing. */}
+      {editing && <div className="operational-heading"><span>{t("roomSensorsHeading")}</span><i>{shown.length}</i></div>}
       <EditableGrid
         hass={hass}
         addLabel={t("addSensors")}
@@ -68,14 +72,15 @@ export function SensorStrip({ props, room }: { props: ScreenProps; room: Room })
         hiddenItems={hidden.map((key) => ({ key, label: nameOf(keyId(key)) }))}
         items={shown.map((id) => {
           const entity = entityOf(id);
-          const name = nameOf(id);
+          const own = config.entity_options?.[id] ?? {};
+          const name = own.pill_text || nameOf(id);
           const value = reading(hass, hass.states[id], language);
           return {
             key: entityKey(id),
             label: name,
             removal: nativeSet.has(id) ? "hide" : "remove",
-            node: <button aria-label={`${name}: ${value}`} onClick={() => entity && setOpened(entity)} title={name} type="button">
-              {entity && <EntityIcon entity={entity} size={18} />}<span><b>{value}</b><small>{name}</small></span>
+            node: <button aria-label={`${name}: ${value}`} className={own.pill_style ? `sensor-pill--${own.pill_style}` : undefined} onClick={() => entity && setOpened(entity)} title={name} type="button">
+              {entity && own.pill_style !== "text" && <EntityIcon entity={entity} size={18} />}<span><b>{value}</b>{own.pill_style !== "icon" && <small>{name}</small>}</span>
             </button>,
           };
         })}
@@ -87,7 +92,8 @@ export function SensorStrip({ props, room }: { props: ScreenProps; room: Room })
         t={t}
       />
       {picking && <EntityPicker domains={["sensor"]} language={language} onClose={() => setPicking(false)} onToggle={toggle} rooms={props.catalogRooms} selected={shown} t={t} title={t("addSensors")} />}
-      {opened && <EntityModal entity={opened} hass={hass} language={language} onClose={() => setOpened(null)} roomName={room.name} t={t} />}
+      {/* Over the whole panel: inside the room header the details would sit under the cards that follow. */}
+      {opened && shell && createPortal(<EntityModal entity={opened} hass={hass} language={language} onClose={() => setOpened(null)} roomName={room.name} t={t} />, shell)}
     </section>
   );
 }

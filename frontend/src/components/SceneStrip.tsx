@@ -1,5 +1,6 @@
 import { useCustomize } from "../personalize";
 import { useMemo, useState } from "react";
+import { childLocked, childLockNote, useDevicePref } from "../devicePrefs";
 import { arrange, entityKey, getLayout, keyId, setHidden } from "../layout";
 import { usePlan } from "../plan";
 import type { ScreenProps } from "../screens/types";
@@ -16,6 +17,8 @@ export const roomScenesScreen = (roomId: string) => `room-scenes:${roomId}`;
 const UNASSIGNED = "__unassigned__";
 /** Scripts are never in the strip on their own: only the ones added in edit mode, run with one tap. */
 const isScript = (id: string) => id.startsWith("script.");
+/** States that light a strip button whose scene follows another entity. */
+const LIT = new Set(["on", "open", "playing", "home", "unlocked", "heat", "cool", "heat_cool", "auto", "dry", "fan_only", "armed_home", "armed_away", "armed_night"]);
 
 /** Scenes of Home, above the devices in every layout: the scenes of the panel's rooms and the ones
  * without a room (Home Assistant often leaves scenes without an area). In edit mode they can be
@@ -25,6 +28,7 @@ export function SceneStrip({ props, room }: { props: ScreenProps; room?: Room })
   // In a room (option "Scenes at the top of each room"): that room's scenes, saved on their own screen.
   const screen = room ? roomScenesScreen(room.id) : SCENES_STRIP;
   const [picking, setPicking] = useState(false);
+  const childOn = useDevicePref(childLocked);
   const plan = usePlan();
   const customize = useCustomize();
   const everywhere = useMemo(() => entityIndex(props.catalogRooms), [props.catalogRooms]);
@@ -57,6 +61,12 @@ export function SceneStrip({ props, room }: { props: ScreenProps; room?: Room })
     return entity?.display_icon ? <EntityIcon entity={entity} size={18} /> : <HDIcon name={isScript(id) ? "play" : "scene"} size={18} />;
   };
   const nameOf = (id: string) => everywhere.byId.get(id)?.name ?? String(hass.states[id]?.attributes.friendly_name ?? id);
+  const optionsOf = (id: string) => config.entity_options?.[id] ?? {};
+  // A tap runs it, unless the child lock holds it (options: Edit mode, tap the button).
+  const run = (id: string) => {
+    if (childOn && optionsOf(id).child_lock) { childLockNote("blocked"); return; }
+    void hass.callService(isScript(id) ? "script" : "scene", "turn_on", { entity_id: id });
+  };
 
   if (shown.length === 0 && !editing) return null;
   return (
@@ -74,7 +84,12 @@ export function SceneStrip({ props, room }: { props: ScreenProps; room?: Room })
             key: entityKey(id),
             label: name,
             removal: nativeSet.has(id) ? "hide" : "remove",
-            node: <button onClick={() => void hass.callService(isScript(id) ? "script" : "scene", "turn_on", { entity_id: id })} type="button">{iconOf(id)}<span>{name}</span></button>,
+            node: (() => {
+              const own = optionsOf(id);
+              const lit = Boolean(own.highlight_entity && LIT.has(hass.states[own.highlight_entity]?.state ?? ""));
+              const locked = childOn && own.child_lock;
+              return <button className={lit ? "scene-strip__lit" : undefined} onClick={() => { if (!editing) run(id); }} type="button">{iconOf(id)}<span>{name}</span>{locked && <HDIcon name="lock" size={13} />}</button>;
+            })(),
           };
         })}
         layout={layout}

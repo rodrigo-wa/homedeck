@@ -1,5 +1,6 @@
+import { dragScroll } from "../dragScroll";
 import { planTitle } from "./FloorPlan";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { TranslationKey } from "../i18n";
 import type { HomeDeckConfig, HomeDeckPageConfig } from "../types/config";
@@ -64,6 +65,7 @@ export function NavigationDock({ active, config, editing, hasMedia, hasScenes, h
     setDragging(id);
     setLive(order.current);
   };
+  const sideways = useMemo(() => dragScroll(), []);
   const move = (event: ReactPointerEvent) => {
     const current = order.current;
     if (!dragging || !current || !nav.current) return;
@@ -101,7 +103,8 @@ export function NavigationDock({ active, config, editing, hasMedia, hasScenes, h
     type="button"
   ><HDIcon name={editing && movable ? "grip" : tab.icon} size={19} /><span>{tab.label}</span></button>;
 
-  return <nav aria-label={t("navigation")} className={editing ? "navigation-dock navigation-dock--editing" : "navigation-dock"} onLostPointerCapture={end} onPointerMove={move} onPointerUp={end} ref={nav}>
+  // Outside Edit mode a mouse drags a bar wider than the screen sideways (fingers already scroll it).
+  return <nav aria-label={t("navigation")} className={editing ? "navigation-dock navigation-dock--editing" : "navigation-dock"} onClickCapture={editing ? undefined : sideways.onClickCapture} onLostPointerCapture={end} onPointerDown={editing ? undefined : sideways.onPointerDown} onPointerMove={(event) => { move(event); if (!editing) sideways.onPointerMove(event); }} onPointerUp={(event) => { end(); if (!editing) sideways.onPointerUp(event); }} ref={nav}>
     {pill && !editing && <span aria-hidden="true" className="navigation-dock__pill" style={{ left: pill.left, top: pill.top, width: pill.width, height: pill.height }} />}
     {item({ id: "home", icon: "home", label: t("home") }, false)}
     {shown.map((tab) => item(tab, true))}

@@ -24,6 +24,11 @@ export const themeEditing = String.raw`
 .app-shell .hd-section::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.2); }
 .app-shell .hd-sections--editing > .hd-item--section { cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .app-shell .hd-section--editing { padding-left: calc(var(--u)*4.6); color: var(--ink-3); }
+/* "Starts folded" beside a separator's title in Edit mode. */
+.app-shell .hd-section__start { display: inline-flex; align-items: center; gap: calc(var(--u)*.6); height: calc(var(--u)*4); padding: 0 calc(var(--u)*1.4); border-radius: var(--hd-pill,99px); border: 1px solid rgba(255,255,255,.18); background: transparent; color: var(--ink-2); font: 600 calc(var(--u)*1.5)/1 var(--f-body); cursor: pointer; flex: none; }
+.app-shell .hd-section__start svg { transform: rotate(90deg); transition: transform .2s; }
+.app-shell .hd-section__start--on { background: rgba(255,255,255,.9); color: #1d1a17; border-color: transparent; }
+.app-shell .hd-section__start--on svg { transform: rotate(0deg); }
 .app-shell .hd-section__input { flex: 0 1 calc(var(--u)*34); min-width: 0; height: calc(var(--u)*4.4); padding: 0 calc(var(--u)*1.2); border-radius: calc(var(--u)*1.2*var(--hd-r,1)); border: 1px dashed rgba(255,255,255,.35); background: rgba(255,255,255,.06); color: var(--ink); font: inherit; letter-spacing: inherit; text-transform: uppercase; }
 .app-shell .hd-section__input:focus { outline: none; border-style: solid; border-color: rgba(255,255,255,.6); }
 .app-shell .hd-sections > .hd-item--section .hd-item__badge--remove { top: 50%; left: 0; transform: translateY(-50%); }
